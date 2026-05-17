@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite --host",
-    "build": "node build.js",
+    "build": "vite build",
     "preview": "vite preview",
     "start:all": "npx concurrently \"npm run dev\" \"npm run dev --prefix nexmarket\"",
     "migrate": "node scripts/migrateToSupabase.js"
