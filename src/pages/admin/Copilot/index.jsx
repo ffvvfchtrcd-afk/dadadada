@@ -12,7 +12,7 @@ function parseSimpleMarkdown(text) {
   if (!text) return '';
   
   // Limpa todos os blocos de ação técnica para não exibir na conversa do chat
-  let cleanText = text.replace(/\[ADMIN_ACTION\]\s*\{.*?\}/g, '').trim();
+  let cleanText = text.replace(/\[ADMIN_ACTION\]\s*\{.*/g, '').trim();
 
   // Escapa HTML básico
   let html = cleanText
@@ -99,7 +99,7 @@ export default function Copilot() {
 
   // Trata e executa possíveis ações administrativas embutidas na resposta da IA
   const handlePotentialAdminAction = async (responseText) => {
-    const actionRegex = /\[ADMIN_ACTION\]\s*(\{.*?\})/g;
+    const actionRegex = /\[ADMIN_ACTION\]\s*(\{.*)/g;
     let match;
     const actionsToExecute = [];
 
