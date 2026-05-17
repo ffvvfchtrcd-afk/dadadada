@@ -180,7 +180,7 @@ export default function Copilot() {
     setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '' }]);
 
     try {
-      await openrouterService.enviarMensagemStream(
+      const streamResult = await openrouterService.enviarMensagemStream(
         [...messages, userMessage],
         model,
         (chunk, fullContent) => {
@@ -190,14 +190,10 @@ export default function Copilot() {
         }
       );
 
-      // Busca a última mensagem completa e analisa ações embutidas
-      setMessages(prev => {
-        const completedMsg = prev.find(msg => msg.id === assistantMsgId);
-        if (completedMsg) {
-          handlePotentialAdminAction(completedMsg.content);
-        }
-        return prev;
-      });
+      // Executa a ação administrativa de forma segura a partir do conteúdo consolidado retornado pelo stream
+      if (streamResult && streamResult.content) {
+        await handlePotentialAdminAction(streamResult.content);
+      }
 
     } catch (err) {
       console.error(err);

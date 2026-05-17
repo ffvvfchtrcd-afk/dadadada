@@ -67,9 +67,7 @@ export const openrouterService = {
     const apiKey = localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
     
     // Busca o contexto consolidado atualizado
-    const contextoConsolidado = await aiContextService.obterContextoConsolidated ? 
-      await aiContextService.obterContextoConsolidado() : 
-      await aiContextService.obterContextoConsolidado();
+    const contextoConsolidado = await aiContextService.obterContextoConsolidado();
 
     const promptSistema = this._obterSystemPromptDinamico(contextoConsolidado);
 

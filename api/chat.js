@@ -81,21 +81,18 @@ module.exports = async function handler(req, res) {
       res.setHeader('Connection', 'keep-alive');
 
       const reader = response.body;
-      if (reader.readable) {
-        reader.on('data', (chunk) => {
-          res.write(chunk);
-        });
-        reader.on('end', () => {
+      if (reader) {
+        try {
+          for await (const chunk of reader) {
+            res.write(chunk);
+          }
+        } catch (streamErr) {
+          console.error("Erro durante o streaming do proxy:", streamErr);
+        } finally {
           res.end();
-        });
-        reader.on('error', (err) => {
-          console.error("Erro no streaming do proxy:", err);
-          res.end();
-        });
+        }
       } else {
-        // Fallback se o stream não estiver legível diretamente
-        const text = await response.text();
-        res.write(text);
+        res.write("data: [ERROR] Stream de resposta vazio do OpenRouter\n\n");
         res.end();
       }
     } else {
