@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Store, FolderTree,
   Settings, ChevronDown, ChevronRight, BarChart3, Wallet, Tag, Image,
-  Menu, X, LogOut, TrendingUp, AlertTriangle,
+  Menu, X, LogOut, TrendingUp, AlertTriangle, Sparkles
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -14,6 +14,7 @@ const navGroups = [
     items: [
       { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
       { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+      { name: 'IA Copiloto', path: '/admin/copilot', icon: Sparkles },
     ],
   },
   {

@@ -16,6 +16,7 @@ const SettingsPage = React.lazy(() => import('./pages/admin/Settings/SettingsPag
 const CouponsPage = React.lazy(() => import('./pages/admin/Coupons/CouponsPage'));
 const BannersPage = React.lazy(() => import('./pages/admin/Banners/BannersPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/admin/Analytics/AnalyticsPage'));
+const CopilotPage = React.lazy(() => import('./pages/admin/Copilot'));
 
 // Fallback de loading minimalista para as páginas lazy
 function PageLoader() {
@@ -33,6 +34,7 @@ function App() {
         <Route index element={<Navigate to="/admin" replace />} />
         <Route path="admin" element={<Suspense fallback={<PageLoader />}><DashboardHome /></Suspense>} />
         <Route path="admin/analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
+        <Route path="admin/copilot" element={<Suspense fallback={<PageLoader />}><CopilotPage /></Suspense>} />
         <Route path="admin/categories" element={<Suspense fallback={<PageLoader />}><CategoriesList /></Suspense>} />
         <Route path="admin/products" element={<Suspense fallback={<PageLoader />}><ProductsList /></Suspense>} />
         <Route path="admin/products/new" element={<Suspense fallback={<PageLoader />}><ProductForm /></Suspense>} />

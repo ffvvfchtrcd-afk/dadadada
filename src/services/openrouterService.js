@@ -1,0 +1,243 @@
+import { aiContextService } from './aiContextService';
+
+export const openrouterService = {
+  _abortController: null,
+
+  /**
+   * Envia mensagens para a API de chat (Backend Proxy).
+   */
+  async enviarMensagem(mensagens, modelo, opcoes = {}) {
+    const apiKey = localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
+    
+    // Busca o contexto consolidado atualizado
+    const contextoConsolidado = await aiContextService.obterContextoConsolidado();
+    const promptSistema = this._obterSystemPromptDinamico(contextoConsolidado);
+
+    const mensagensFormatadas = [
+      { role: 'system', content: promptSistema },
+      ...mensagens.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content
+      }))
+    ];
+
+    this._abortController = new AbortController();
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          modelo: modelo || 'openrouter/free',
+          mensagens: mensagensFormatadas,
+          temperatura: opcoes.temperatura ?? 0.4,
+          maxTokens: opcoes.maxTokens ?? 2048,
+          stream: false
+        }),
+        signal: this._abortController.signal
+      });
+
+      if (!response.ok) {
+        const erroDados = await response.json().catch(() => ({}));
+        throw new Error(erroDados.error || `Erro HTTP: ${response.statusText}`);
+      }
+
+      const dados = await response.json();
+      return {
+        content: dados.choices[0].message.content,
+        model: dados.model
+      };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Requisição cancelada pelo usuário.');
+      }
+      throw err;
+    } finally {
+      this._abortController = null;
+    }
+  },
+
+  /**
+   * Envia mensagens com streaming em tempo real (SSE).
+   */
+  async enviarMensagemStream(mensagens, modelo, callbackChunk, opcoes = {}) {
+    const apiKey = localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
+    
+    // Busca o contexto consolidado atualizado
+    const contextoConsolidado = await aiContextService.obterContextoConsolidated ? 
+      await aiContextService.obterContextoConsolidado() : 
+      await aiContextService.obterContextoConsolidado();
+
+    const promptSistema = this._obterSystemPromptDinamico(contextoConsolidado);
+
+    const mensagensFormatadas = [
+      { role: 'system', content: promptSistema },
+      ...mensagens.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content
+      }))
+    ];
+
+    this._abortController = new AbortController();
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          modelo: modelo || 'openrouter/free',
+          mensagens: mensagensFormatadas,
+          temperatura: opcoes.temperatura ?? 0.3,
+          maxTokens: opcoes.maxTokens ?? 2048,
+          stream: true
+        }),
+        signal: this._abortController.signal
+      });
+
+      if (!response.ok) {
+        const erroDados = await response.json().catch(() => ({}));
+        throw new Error(erroDados.error || `Erro HTTP: ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let completeContent = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              completeContent += delta;
+              callbackChunk(delta, completeContent);
+            }
+          } catch (e) {
+            // Ignora JSON mal formatado durante buffers de stream
+          }
+        }
+      }
+
+      return { content: completeContent };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Cancelado.');
+      }
+      throw err;
+    } finally {
+      this._abortController = null;
+    }
+  },
+
+  /**
+   * Obtém os modelos gratuitos do OpenRouter diretamente.
+   */
+  async obterModelosGratuitos() {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/models');
+      if (!response.ok) throw new Error('Não foi possível buscar modelos.');
+
+      const { data } = await response.json();
+      
+      const freeModels = data.filter(model => {
+        const promptCost = Number(model.pricing?.prompt || 0);
+        const completionCost = Number(model.pricing?.completion || 0);
+        return promptCost === 0 && completionCost === 0;
+      });
+
+      const mapped = freeModels.map(m => ({
+        id: m.id,
+        nome: m.name,
+        descricao: m.description || 'Modelo de IA gratuito no OpenRouter',
+        org: m.id.split('/')[0]
+      }));
+
+      return [
+        {
+          id: 'openrouter/free',
+          nome: 'Auto (Modelo Gratuito Aleatório)',
+          descricao: 'O OpenRouter escolhe automaticamente um modelo gratuito online para você',
+          org: 'OpenRouter'
+        },
+        ...mapped
+      ];
+    } catch (e) {
+      console.warn("Erro ao carregar modelos dinâmicos do OpenRouter, carregando fallbacks:", e);
+      return [
+        { id: 'openrouter/free', nome: 'Auto (Modelo Gratuito Aleatório)', org: 'OpenRouter' },
+        { id: 'google/gemma-2-9b-it:free', nome: 'Gemma 2 9B (Google)', org: 'Google' },
+        { id: 'meta-llama/llama-3-8b-instruct:free', nome: 'Llama 3 8B (Meta)', org: 'Meta' },
+        { id: 'qwen/qwen-2-7b-instruct:free', nome: 'Qwen 2 7B (Alibaba)', org: 'Qwen' }
+      ];
+    }
+  },
+
+  cancelar() {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
+  },
+
+  _obterSystemPromptDinamico(contextoConsolidado) {
+    return `
+Você é a IA Copiloto Oficial de Administração da plataforma NexMarket.
+Você tem acesso em tempo real a todo o banco de dados da loja através do contexto fornecido abaixo.
+Sua função é auxiliar o administrador a consultar métricas de faturamento e vendas, gerenciar estoque, editar produtos e variações, e configurar políticas de entrega com total segurança e precisão.
+
+---
+BASE DE DADOS EM TEMPO REAL E VENDAS:
+${JSON.stringify(contextoConsolidado, null, 2)}
+---
+
+🛡️ REGRAS DE COMPORTAMENTO E CONTROLE DE ERROS (CRÍTICO):
+
+1. **Liberdade de Conversa com Foco:** Você fala em português do Brasil impecável, formatado em Markdown premium (tabelas, negritos e listas). Seja prestativo, inteligente e objetivo.
+
+2. **FILTRO SOCRÁTICO PARA EVITAR AMBIGUIDADES (REGRA DE OURO):**
+   Se o administrador pedir para alterar algo (ex: "mude o preço do Netflix para R$ 10" ou "altere a descrição do fone") e houver mais de um produto ou variação correspondente:
+   - **Você é expressamente proibido de tomar uma decisão por conta própria.**
+   - **Você NÃO DEVE gerar o bloco [ADMIN_ACTION].**
+   - Em vez disso, liste as variações ou produtos encontrados de forma clara e numerada, e pergunte socraticamente:
+     > *"Identifiquei mais de um item correspondente para '<termo>':*
+     > *1. [Nome da Variação 1] (ID: <id1>) - Preço atual: R$ X*
+     > *2. [Nome da Variação 2] (ID: <id2>) - Preço atual: R$ Y*
+     > *Por favor, confirme digitando o número ou o ID correto para que eu possa efetuar a alteração de forma segura!"*
+
+3. **BLOCOS DE AÇÃO ESTRUTURADA [ADMIN_ACTION]:**
+   Somente quando o item alvo for perfeitamente identificado de forma unívoca, responda explicando o que fez de forma profissional e amigável e insira **NO FINAL da resposta, na última linha**, a tag "[ADMIN_ACTION]" seguida do JSON estruturado na mesma linha:
+
+   [ADMIN_ACTION] {"comando": "EDITAR_PRODUTO", "parametros": {"id": "ID_EXATO_DO_PRODUTO_OU_VARIACAO", "tipo": "produto" | "variacao", "campos": {"preco": 49.90, "nome": "Novo Nome", "descricao": "Nova Descrição"}}}
+   
+   [ADMIN_ACTION] {"comando": "ALTERAR_METODO_ENTREGA", "parametros": {"variationId": "ID_EXATO_DA_VARIACAO", "metodoEntrega": "AUTOMATICA" | "MANUAL" | "AGENTE"}}
+   
+   [ADMIN_ACTION] {"comando": "CARREGAR_ESTOQUE", "parametros": {"variationId": "ID_EXATO_DA_VARIACAO", "lines": ["linha1", "linha2"]}}
+
+   *Nota sobre CARREGAR_ESTOQUE:* Se o administrador enviar uma lista de contas com linhas em branco ou vazias, você deve obrigatoriamente filtrá-las e enviar no array "lines" somente os itens de estoque válidos.
+   *Nota sobre preços:* Nunca invente ou altere dados sem instrução clara do administrador. Formate valores monetários em formato numérico puro no JSON (ex: 29.90).
+
+4. **Consultas de Estatísticas:**
+   Quando o usuário perguntar quanto faturou, quantas vendas teve hoje ou ontem, consulte o objeto "estatisticas" no topo do contexto e monte um relatório premium formatado em tabela Markdown com faturamento bruto e contagem de vendas de hoje e ontem, celebrando o progresso da loja.
+`;
+  }
+};
