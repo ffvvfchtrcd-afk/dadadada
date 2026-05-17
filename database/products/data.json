@@ -1,0 +1,129 @@
+[
+  {
+    "id": 1,
+    "nome": "Conta Discord Nitro",
+    "slug": "conta-discord-nitro",
+    "categoriaId": 2,
+    "icone": "https://picsum.photos/seed/discord-nitro/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/discord1/400/400",
+      "https://picsum.photos/seed/discord2/400/400",
+      "https://picsum.photos/seed/discord3/400/400"
+    ],
+    "miniDesc": "Conta Discord Nitro com perks exclusivos",
+    "descricao": "<p>Conta Premium Discord Nitro com acesso a todos os benefícios: emojis personalizados, animated avatar, suporte a streaming em 4K, nitro games, e mais.</p><ul><li>✅ Acesso imediato</li><li>✅ Dados verificados</li><li>✅ Suporte 24/7</li></ul>",
+    "tags": [
+      "destaque",
+      "nitro",
+      "discord"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-16T21:55:53.030Z",
+    "destaque": false
+  },
+  {
+    "id": 2,
+    "nome": "Conta Netflix Premium",
+    "slug": "conta-netflix-premium",
+    "categoriaId": 1,
+    "icone": "https://picsum.photos/seed/netflix/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/netflix1/400/400",
+      "https://picsum.photos/seed/netflix2/400/400"
+    ],
+    "miniDesc": "Conta Netflix 4K em até 4 dispositivos",
+    "descricao": "<p>Conta Netflix Premium com acesso completo a todo o catálogo, incluindo produções originais. Qualidade 4K HDR em até 4 dispositivos simultâneos.</p><ul><li>✅ Perfis disponíveis: 4</li><li>✅ Qualidade: 4K HDR</li><li>✅ Streaming simultâneo</li></ul>",
+    "tags": [
+      "streaming",
+      "netflix",
+      "4k"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-16T22:50:20.085Z",
+    "destaque": false
+  },
+  {
+    "id": 3,
+    "nome": "Email Corporativo Premium",
+    "slug": "email-corporativo-premium",
+    "categoriaId": 3,
+    "icone": "https://picsum.photos/seed/email-pro/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/email1/400/400"
+    ],
+    "miniDesc": "Seu domínio personalizado (@suaempresa.com)",
+    "descricao": "<p>Email profissional com seu domínio personalizado. Inclui 30GB de armazenamento, suporte prioritário, calendário integrado e muito mais.</p><ul><li>✅ Seu domínio @empresa.com</li><li>✅ 30GB armazenamento</li><li>✅ Suporte Priority</li></ul>",
+    "tags": [
+      "email",
+      "profissional",
+      "corporativo"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 4,
+    "nome": "Gift Card Steam R$ 100",
+    "slug": "gift-card-steam-100",
+    "categoriaId": 4,
+    "icone": "https://picsum.photos/seed/steam100/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/steam-gift1/400/400",
+      "https://picsum.photos/seed/steam-gift2/400/400"
+    ],
+    "miniDesc": "Gift Card Steam R$ 100 - Entrega instantânea",
+    "descricao": "<p>Gift Card Steam Wallet de R$ 100 para usar na Steam Store. Código digital enviado instantaneamente após a aprovação do pagamento.</p><ul><li>✅ Entrega em segundos</li><li>✅ Código oficial Steam</li><li>✅ Uso imediato</li></ul>",
+    "tags": [
+      "gift-card",
+      "steam",
+      "jogos"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 5,
+    "nome": "Chave GTA V Premium Edition",
+    "slug": "chave-gta-v",
+    "categoriaId": 5,
+    "icone": "https://picsum.photos/seed/gta5/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/gta1/400/400",
+      "https://picsum.photos/seed/gta2/400/400"
+    ],
+    "miniDesc": "Chave GTA V Premium Edition - Steam Key",
+    "descricao": "<p>Chave de ativação para GTA V Premium Edition na Steam. Inclui o jogo completo + acesso ao GTA Online.</p><ul><li>✅ Chave oficial Steam</li><li>✅ Download imediato</li><li>✅ Garantia vitalícia</li></ul>",
+    "tags": [
+      "chave",
+      "gta",
+      "rockstar"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 6,
+    "nome": "Conta Spotify Premium",
+    "slug": "conta-spotify-premium",
+    "categoriaId": 1,
+    "icone": "https://picsum.photos/seed/spotify/400/400",
+    "imagens": [
+      "https://picsum.photos/seed/spotify1/400/400"
+    ],
+    "miniDesc": "Conta Spotify Premium sem anúncios",
+    "descricao": "<p>Conta Spotify Premium com acesso offline, sem anúncios, qualidade máxima e liberdade para escolher qualquer música.</p><ul><li>✅ Sem anúncios</li><li>✅ Download offline</li><li>✅ Alta qualidade de áudio</li></ul>",
+    "tags": [
+      "spotify",
+      "música",
+      "streaming"
+    ],
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  }
+]

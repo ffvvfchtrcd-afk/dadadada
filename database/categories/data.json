@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "nome": "Contas de Streaming",
+    "slug": "contas-streaming",
+    "hierarquia": 1,
+    "icone": "fa-solid fa-tv",
+    "imageUrl": "https://cdn.discordapp.com/attachments/1500583235514667098/1505343208127991850/9k.png?ex=6a0a479c&is=6a08f61c&hm=6f49357a0421a04eac0dee3c9a7c1512fd74bc99894ddc7258ae6f854f9dfd38&",
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-16T23:04:37.074Z"
+  },
+  {
+    "id": 3,
+    "nome": "Contas de Email",
+    "slug": "contas-email",
+    "hierarquia": 2,
+    "icone": "fa-solid fa-envelope",
+    "imageUrl": "",
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 2,
+    "nome": "Contas de Jogos",
+    "slug": "contas-jogos",
+    "hierarquia": 3,
+    "icone": "fa-solid fa-gamepad",
+    "imageUrl": "",
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 4,
+    "nome": "Gift Cards",
+    "slug": "gift-cards",
+    "hierarquia": 4,
+    "icone": "fa-solid fa-gift",
+    "imageUrl": "",
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  },
+  {
+    "id": 5,
+    "nome": "Chaves de Jogos",
+    "slug": "chaves-jogos",
+    "hierarquia": 5,
+    "icone": "fa-solid fa-key",
+    "imageUrl": "",
+    "status": "ATIVO",
+    "dataCriacao": "2026-05-14T16:10:00.000Z",
+    "dataAtualizacao": "2026-05-14T16:10:00.000Z"
+  }
+]

@@ -1,0 +1,61 @@
+[
+  {
+    "id": 1,
+    "produtoId": 2,
+    "variacaoId": "var_003abc123def456",
+    "pedidoId": "ord_7f8e9d0c1b2a3f4e",
+    "usuarioId": 2,
+    "nota": 5,
+    "comentario": "Entrega super rápida! Recebi os dados em menos de 2 minutos. Conta funcionando perfeitamente.",
+    "media_anexos": [],
+    "status": "APROVADO",
+    "respostaVendedor": "Obrigado pela compra! any questions, contact us! 😊",
+    "data": "2026-05-14T19:00:00.000Z",
+    "dataAtualizacao": "2026-05-14T19:30:00.000Z"
+  },
+  {
+    "id": 2,
+    "produtoId": 6,
+    "variacaoId": "var_007abc123def456",
+    "pedidoId": null,
+    "usuarioId": 2,
+    "nota": 4,
+    "comentario": "Conta boa, só demorou um pouco mais do que o esperado.",
+    "media_anexos": [],
+    "status": "APROVADO",
+    "respostaVendedor": null,
+    "data": "2026-05-12T15:00:00.000Z",
+    "dataAtualizacao": "2026-05-12T15:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "produtoId": 1,
+    "variacaoId": null,
+    "pedidoId": null,
+    "usuarioId": 3,
+    "nota": 1,
+    "comentario": "Conta não funcionou, preciso de reembolso",
+    "media_anexos": [],
+    "status": "PENDENTE",
+    "respostaVendedor": null,
+    "data": "2026-05-13T11:00:00.000Z",
+    "dataAtualizacao": "2026-05-13T11:00:00.000Z"
+  },
+  {
+    "id": 4,
+    "produtoId": 5,
+    "variacaoId": "var_006abc123def456",
+    "pedidoId": "ord_9c8d7e6f5a4b3c2d",
+    "usuarioId": 3,
+    "nota": 2,
+    "comentario": "Chave inválida, não funcionou no Steam",
+    "media_anexos": [
+      "https://picsum.photos/seed/erro1/400/400",
+      "https://picsum.photos/seed/erro2/400/400"
+    ],
+    "status": "REJEITADO",
+    "respostaVendedor": "Chave original verificada - o problema foi账户已被封禁 na Steam (usuário banido). Isso não é responsabilidade da loja.",
+    "data": "2026-05-13T09:00:00.000Z",
+    "dataAtualizacao": "2026-05-13T10:00:00.000Z"
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "del_a1b2c3d4e5f6g7h8",
+    "pedidoId": "ord_7f8e9d0c1b2a3f4e",
+    "usuarioId": 2,
+    "variacaoId": "var_003abc123def456",
+    "dadosEntregues": [
+      "netflix_pro1@email.com:pass123",
+      "netflix_pro2@email.com:pass456"
+    ],
+    "status": "ENTREGUE",
+    "dataEntrega": "2026-05-14T18:02:30.000Z",
+    "dataVisualizado": "2026-05-14T18:15:00.000Z",
+    "enviadoEmail": true,
+    "metodo": "AUTOMATICO",
+    "dataAtualizacao": "2026-05-14T18:15:00.000Z"
+  },
+  {
+    "id": "del_b2c3d4e5f6g7h8i9",
+    "pedidoId": "ord_7f8e9d0c1b2a3f4e",
+    "usuarioId": 2,
+    "variacaoId": "var_007abc123def456",
+    "dadosEntregues": [
+      "spotify_prem001@email.com:sp123"
+    ],
+    "status": "ENTREGUE",
+    "dataEntrega": "2026-05-14T18:02:35.000Z",
+    "dataVisualizado": "2026-05-14T18:20:00.000Z",
+    "enviadoEmail": true,
+    "metodo": "AUTOMATICO",
+    "dataAtualizacao": "2026-05-14T18:20:00.000Z"
+  },
+  {
+    "id": "del_c3d4e5f6g7h8i9j0",
+    "pedidoId": "ord_1a2b3c4d5e6f7a8b",
+    "usuarioId": 2,
+    "variacaoId": "var_001abc123def456",
+    "dadosEntregues": [],
+    "status": "PENDENTE",
+    "dataEntrega": null,
+    "dataVisualizado": null,
+    "enviadoEmail": false,
+    "metodo": "AUTOMATICO",
+    "dataAtualizacao": "2026-05-14T19:30:00.000Z"
+  }
+]

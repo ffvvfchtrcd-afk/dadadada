@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "title": "Contas de Streaming Premium",
+    "imageUrl": "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
+    "link": "/categoria/streaming",
+    "position": "home-top",
+    "status": "ATIVO",
+    "order": 1
+  },
+  {
+    "id": 2,
+    "title": "Promoção Jogos",
+    "imageUrl": "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=2165&auto=format&fit=crop",
+    "link": "/promocoes",
+    "position": "home-mid",
+    "status": "ATIVO",
+    "order": 2
+  }
+]
