@@ -29,14 +29,23 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'ID do pagamento ausente' });
     }
 
-    // Busca o arquivo de configuração de forma resiliente em ambas as estruturas de pasta
-    let configPath = path.resolve(process.cwd(), 'database/payment_config.json');
-    if (!fs.existsSync(configPath)) {
-      configPath = path.resolve(process.cwd(), '../database/payment_config.json');
-    }
+    // Obtém o token de forma híbrida: prioriza Variável de Ambiente (Vercel) e faz fallback para o arquivo local
+    let token = process.env.VITE_MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
     
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8') || '{}');
-    const token = config.mp_access_token;
+    if (!token || token.trim().length === 0) {
+      try {
+        let configPath = path.resolve(process.cwd(), 'database/payment_config.json');
+        if (!fs.existsSync(configPath)) {
+          configPath = path.resolve(process.cwd(), '../database/payment_config.json');
+        }
+        if (fs.existsSync(configPath)) {
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf-8') || '{}');
+          token = config.mp_access_token;
+        }
+      } catch (e) {
+        console.warn("Falha ao ler arquivo payment_config.json:", e.message);
+      }
+    }
     
     if (paymentId.startsWith('sim-')) {
       // Modo Demo Simulado: auto-aprovação após 4 segundos
