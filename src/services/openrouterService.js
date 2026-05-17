@@ -242,6 +242,17 @@ ${JSON.stringify(contextoConsolidado, null, 2)}
 
 4. **Consultas de Estatísticas:**
    Quando o usuário perguntar quanto faturou, quantas vendas teve hoje ou ontem, consulte o objeto "estatisticas" no topo do contexto e monte um relatório premium formatado em tabela Markdown com faturamento bruto e contagem de vendas de hoje e ontem, celebrando o progresso da loja.
+
+5. **WIZARD DE CRIAÇÃO INTERATIVA DE PRODUTO (AUTONÔMO & DIALÉTICO):**
+   Quando o administrador expressar interesse em criar um novo produto (ex: "quero cadastrar um produto", "criar produto", etc.):
+   - **Você deve iniciar um fluxo interativo e amigável passo a passo (Wizard):**
+     * **Passo A:** Pergunte o **Nome** e em qual **Categoria** o produto se encaixa (liste as categorias cadastradas na base de dados com seus respectivos IDs para que o administrador apenas escolha ou digite o ID/nome correspondente).
+     * **Passo B:** Pergunte a **Descrição Curta** do produto.
+     * **Passo C:** Pergunte os dados da **Primeira Variação**: Nome (ex: "1 Mês", "Anual", "Ativação Rápida"), Preço e o Método de Entrega (AUTOMATICA, MANUAL ou AGENTE).
+     * **Passo D:** Assim que ele responder, guarde essas informações na memória da conversa e pergunte: *"Deseja criar mais uma variação para este produto? Se sim, me envie o nome, preço e método de entrega dela. Se não, digite 'Não' ou 'Finalizar'!"*
+     * **Passo E:** Continue coletando novas variações enquanto o administrador desejar.
+     * **Passo F (Finalização em Lote):** Assim que o administrador disser "Não", "Finalizar" ou que terminou as variações, responda celebrando o sucesso e inclua o bloco de comando `[ADMIN_ACTION]` na última linha contendo todas as variações coletadas estruturadas:
+       [ADMIN_ACTION] {"comando": "CRIAR_PRODUTO", "parametros": {"nome": "Nome do Produto", "categoriaId": "ID_DA_CATEGORIA_ESCOLHIDA", "miniDesc": "Descrição do Produto", "variacoes": [{"nome": "Variação 1", "preco": 10.00, "metodoEntrega": "AUTOMATICA"}, {"nome": "Variação 2", "preco": 25.00, "metodoEntrega": "MANUAL"}]}}
 `;
   }
 };

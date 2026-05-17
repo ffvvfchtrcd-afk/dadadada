@@ -39,7 +39,7 @@ export const aiActionService = {
         }
 
         case 'CRIAR_PRODUTO': {
-          const { nome, categoriaId, miniDesc, preco, metodoEntrega } = payload;
+          const { nome, categoriaId, miniDesc, preco, metodoEntrega, variacoes } = payload;
           if (!nome) throw new Error("Nome do produto obrigatório.");
           if (!categoriaId) throw new Error("Categoria obrigatória.");
 
@@ -63,24 +63,49 @@ export const aiActionService = {
           const createdProduct = pResult?.[0] || pResult;
           if (!createdProduct || !createdProduct.id) throw new Error("Falha ao salvar produto no Supabase.");
 
-          // 2. Cria a variação padrão para o produto
-          const vResult = await api.save('variacoes', {
-            produtoId: createdProduct.id,
-            nome: 'Padrão',
-            slug: 'padrao',
-            preco: Number(preco) || 1.00,
-            estoque_tipo: metodoEntrega || 'MANUAL',
-            status: 'ATIVO',
-            quantidadeStock: 0,
-            stockData: [],
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          });
+          // 2. Cria as variações fornecidas ou a variação padrão
+          const vResults = [];
+          if (variacoes && Array.isArray(variacoes) && variacoes.length > 0) {
+            for (const v of variacoes) {
+              const vSlug = String(v.nome || 'padrao').toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)+/g, '');
+
+              const vRes = await api.save('variacoes', {
+                produtoId: createdProduct.id,
+                nome: v.nome || 'Padrão',
+                slug: vSlug,
+                preco: Number(v.preco) || 1.00,
+                estoque_tipo: v.metodoEntrega || v.estoque_tipo || 'MANUAL',
+                status: v.status || 'ATIVO',
+                quantidadeStock: Number(v.quantidadeStock) || 0,
+                stockData: v.stockData || [],
+                dataCriacao: new Date().toISOString(),
+                dataAtualizacao: new Date().toISOString()
+              });
+              vResults.push(vRes);
+            }
+          } else {
+            const vRes = await api.save('variacoes', {
+              produtoId: createdProduct.id,
+              nome: 'Padrão',
+              slug: 'padrao',
+              preco: Number(preco) || 1.00,
+              estoque_tipo: metodoEntrega || 'MANUAL',
+              status: 'ATIVO',
+              quantidadeStock: 0,
+              stockData: [],
+              dataCriacao: new Date().toISOString(),
+              dataAtualizacao: new Date().toISOString()
+            });
+            vResults.push(vRes);
+          }
 
           return {
             success: true,
-            message: `Produto "${nome}" criado com sucesso junto com a variação Padrão!`,
-            data: { produto: createdProduct, variacao: vResult }
+            message: `Produto "${nome}" criado com sucesso com ${vResults.length} variação(ões) no Supabase!`,
+            data: { produto: createdProduct, variacoes: vResults }
           };
         }
 
