@@ -1,14 +1,396 @@
-<!doctype html>
-<html lang="pt-BR" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard Premium</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body class="bg-gray-900 text-gray-100 font-sans antialiased overflow-hidden">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Chat com IA usando OpenRouter - Acesse modelos gratuitos de IA como DeepSeek, Llama, Qwen e mais.">
+    <title>NexChat - Chat com IA</title>
+    <!-- Conexões de rede otimizadas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://openrouter.ai">
+    <link rel="dns-prefetch" href="https://openrouter.ai">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Estilos modulares (Compilados em nexchat.min.css para produção) -->
+    <link rel="stylesheet" href="estilos/principal.css">
+    <link rel="stylesheet" href="estilos/chat.css">
+    <link rel="stylesheet" href="estilos/barra-lateral.css">
+    <link rel="stylesheet" href="estilos/configuracoes.css">
+    <link rel="stylesheet" href="estilos/loja.css">
+    <link rel="stylesheet" href="estilos/animacoes.css">
+</head>
+<body>
+    <!-- Efeito de fundo animado -->
+    <div class="fundo-animado">
+        <div class="orbe orbe-1"></div>
+        <div class="orbe orbe-2"></div>
+        <div class="orbe orbe-3"></div>
+    </div>
+
+    <div id="aplicativo" class="container-aplicativo">
+        <!-- Barra Lateral -->
+        <aside id="barra-lateral" class="barra-lateral">
+            <div class="barra-lateral-cabecalho">
+                <div class="logo">
+                    <div class="logo-icone">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                    <span class="logo-texto">NexChat</span>
+                </div>
+                <button id="botao-nova-conversa" class="botao-nova-conversa" title="Nova Conversa">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="barra-lateral-busca">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="campo-busca-conversas" placeholder="Buscar conversas..." />
+            </div>
+
+            <div id="lista-conversas" class="lista-conversas">
+                <!-- Conversas serão adicionadas via JS -->
+            </div>
+            <div class="barra-lateral-rodape">
+                <button id="botao-abrir-loja" class="botao-loja" title="Gerenciar Loja">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    <span>Banco de Dados (Loja)</span>
+                </button>
+                <button id="botao-configuracoes" class="botao-configuracoes" title="Configurações">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1-2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Configurações</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Overlay mobile -->
+        <div id="overlay-barra-lateral" class="overlay-barra-lateral"></div>
+
+        <!-- Área Principal do Chat -->
+        <main class="area-principal">
+            <!-- Cabeçalho -->
+            <header class="cabecalho-chat">
+                <button id="botao-menu-mobile" class="botao-menu-mobile" title="Menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="cabecalho-info">
+                    <div class="modelo-atual">
+                        <div class="modelo-status-indicador"></div>
+                        <span id="nome-modelo-atual">Selecione um modelo</span>
+                    </div>
+                </div>
+                <div class="cabecalho-acoes">
+                    <button id="botao-selecionar-modelo" class="botao-modelo" title="Trocar Modelo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                        <span>Modelo</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Área de Mensagens -->
+            <div id="area-mensagens" class="area-mensagens">
+                <!-- Tela de boas-vindas -->
+                <div id="tela-boas-vindas" class="tela-boas-vindas">
+                    <div class="boas-vindas-conteudo">
+                        <div class="boas-vindas-icone">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="url(#gradiente-icone)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <defs>
+                                    <linearGradient id="gradiente-icone" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" style="stop-color:#06b6d4" />
+                                        <stop offset="50%" style="stop-color:#8b5cf6" />
+                                        <stop offset="100%" style="stop-color:#ec4899" />
+                                    </linearGradient>
+                                </defs>
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                                <path d="M8 12h.01M12 12h.01M16 12h.01"/>
+                            </svg>
+                        </div>
+                        <h1 class="boas-vindas-titulo">Olá! Eu sou o <span class="gradiente-texto">NexChat</span></h1>
+                        <p class="boas-vindas-subtitulo">Converse com modelos de IA gratuitos via OpenRouter. Escolha entre DeepSeek, Llama, Qwen e muitos outros.</p>
+                        
+                        <div class="sugestoes-container">
+                            <button class="sugestao-card" data-prompt="Explique computação quântica de forma simples">
+                                <div class="sugestao-icone">💡</div>
+                                <div class="sugestao-texto">
+                                    <strong>Explique algo</strong>
+                                    <span>Computação quântica de forma simples</span>
+                                </div>
+                            </button>
+                            <button class="sugestao-card" data-prompt="Escreva um código Python que gere senhas seguras aleatórias">
+                                <div class="sugestao-icone">💻</div>
+                                <div class="sugestao-texto">
+                                    <strong>Escreva código</strong>
+                                    <span>Gerador de senhas em Python</span>
+                                </div>
+                            </button>
+                            <button class="sugestao-card" data-prompt="Me ajude a criar um plano de estudos para aprender programação do zero">
+                                <div class="sugestao-icone">📚</div>
+                                <div class="sugestao-texto">
+                                    <strong>Crie um plano</strong>
+                                    <span>Estudos de programação do zero</span>
+                                </div>
+                            </button>
+                            <button class="sugestao-card" data-prompt="Quais são as tendências de tecnologia para 2026?">
+                                <div class="sugestao-icone">🚀</div>
+                                <div class="sugestao-texto">
+                                    <strong>Analise tendências</strong>
+                                    <span>Tecnologia para 2026</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensagens do chat -->
+                <div id="container-mensagens" class="container-mensagens" style="display: none;"></div>
+            </div>
+
+            <!-- Área de Input -->
+            <div class="area-input">
+                <div class="input-container">
+                    <textarea 
+                        id="campo-mensagem" 
+                        class="campo-mensagem" 
+                        placeholder="Digite sua mensagem..."
+                        rows="1"
+                        maxlength="10000"
+                    ></textarea>
+                    <div class="input-acoes">
+                        <span id="contador-caracteres" class="contador-caracteres">0 / 10000</span>
+                        <button id="botao-enviar" class="botao-enviar" title="Enviar mensagem" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="aviso-ia">IA pode gerar informações imprecisas. Verifique dados importantes.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Seleção de Modelo -->
+    <div id="modal-modelo" class="modal-overlay" style="display: none;">
+        <div class="modal-conteudo modal-modelo">
+            <div class="modal-cabecalho">
+                <h2>Selecionar Modelo</h2>
+                <button id="fechar-modal-modelo" class="botao-fechar-modal">&times;</button>
+            </div>
+            <div class="modal-busca">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="campo-busca-modelos" placeholder="Buscar modelos..." />
+            </div>
+            <div id="lista-modelos" class="lista-modelos">
+                <!-- Modelos serão adicionados via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="modal-configuracoes" class="modal-overlay" style="display: none;">
+        <div class="modal-conteudo modal-configuracoes">
+            <div class="modal-cabecalho">
+                <h2>⚙️ Configurações</h2>
+                <button id="fechar-modal-configuracoes" class="botao-fechar-modal">&times;</button>
+            </div>
+            <div class="configuracoes-conteudo">
+                <!-- API Key -->
+                <div class="config-secao">
+                    <h3>🔑 Chave da API</h3>
+                    <p class="config-descricao">Sua chave API do OpenRouter. Obtenha em <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></p>
+                    <div class="config-campo-api">
+                        <input type="password" id="campo-api-key" placeholder="sk-or-v1-..." class="input-config" />
+                        <button id="botao-ver-api" class="botao-ver-senha" title="Mostrar/Esconder">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                    <button id="botao-salvar-api" class="botao-primario">Salvar Chave</button>
+                </div>
+
+                <!-- Prompt do Sistema -->
+                <div class="config-secao">
+                    <h3>🤖 Prompt do Sistema</h3>
+                    <p class="config-descricao">Defina a personalidade e comportamento da IA</p>
+                    <textarea id="campo-prompt-sistema" class="textarea-config" rows="4" placeholder="Ex: Você é um assistente prestativo que responde em português...">Você é um assistente de IA prestativo, preciso e amigável. Responda sempre em português do Brasil de forma clara e organizada.</textarea>
+                </div>
+
+                <!-- Temperatura -->
+                <div class="config-secao">
+                    <h3>🌡️ Temperatura</h3>
+                    <p class="config-descricao">Controla a criatividade das respostas (0 = preciso, 2 = criativo)</p>
+                    <div class="config-slider">
+                        <input type="range" id="slider-temperatura" min="0" max="2" step="0.1" value="0.7" class="slider">
+                        <span id="valor-temperatura" class="slider-valor">0.7</span>
+                    </div>
+                </div>
+
+                <!-- Max Tokens -->
+                <div class="config-secao">
+                    <h3>📏 Máximo de Tokens</h3>
+                    <p class="config-descricao">Limite máximo de tokens na resposta</p>
+                    <div class="config-slider">
+                        <input type="range" id="slider-max-tokens" min="256" max="4096" step="256" value="2048" class="slider">
+                        <span id="valor-max-tokens" class="slider-valor">2048</span>
+                    </div>
+                </div>
+
+                <!-- Streaming -->
+                <div class="config-secao">
+                    <h3>⚡ Streaming</h3>
+                    <p class="config-descricao">Respostas aparecem em tempo real, palavra por palavra</p>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-streaming" checked>
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+
+                <!-- Limpar Dados -->
+                <div class="config-secao config-perigo">
+                    <h3>🗑️ Dados</h3>
+                    <p class="config-descricao">Limpar todas as conversas e configurações</p>
+                    <button id="botao-limpar-dados" class="botao-perigo">Limpar Tudo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal do Banco de Dados (Loja) -->
+    <div id="modal-loja" class="modal-overlay" style="display: none;">
+        <div class="modal-conteudo" style="max-width: 900px;">
+            <div class="modal-cabecalho">
+                <h2>🛍️ Banco de Dados de Vendas</h2>
+                <button id="fechar-modal-loja" class="botao-fechar-modal">&times;</button>
+            </div>
+            
+            <div class="loja-grid">
+                <!-- Coluna da Esquerda: Produtos Existentes & Config Gerais -->
+                <div class="loja-coluna-produtos">
+                    <div class="loja-coluna-titulo">
+                        <h3>📦 Catálogo de Produtos</h3>
+                    </div>
+                    
+                    <div id="loja-lista-produtos" class="produtos-lista">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                    
+                    <!-- Configurações da Loja -->
+                    <div class="loja-coluna-titulo" style="margin-top: 16px; margin-bottom: 8px;">
+                        <h3>⚙️ Configurações Gerais</h3>
+                    </div>
+                    <div class="form-linha-dupla">
+                        <div class="form-grupo-loja">
+                            <label for="loja-nome-input">Nome da Loja</label>
+                            <input type="text" id="loja-nome-input" class="input-loja" placeholder="Ex: NexTech Store">
+                        </div>
+                        <div class="form-grupo-loja">
+                            <label for="loja-cupom-input">Cupom Ativo (Opcional)</label>
+                            <input type="text" id="loja-cupom-input" class="input-loja" placeholder="Ex: NEX10">
+                        </div>
+                    </div>
+                    <div class="form-grupo-loja">
+                        <label for="loja-garantia-input">Política de Garantia</label>
+                        <input type="text" id="loja-garantia-input" class="input-loja" placeholder="Ex: 12 meses de garantia de fábrica">
+                    </div>
+                </div>
+                
+                <!-- Coluna da Direita: Cadastrar/Editar & Personalidade -->
+                <div class="loja-coluna-config">
+                    <div class="loja-coluna-titulo">
+                        <h3>🧠 Comportamento & Persuasão</h3>
+                    </div>
+                    <div id="seletor-personalidade" class="seletor-personalidade-loja">
+                        <!-- Inserido dinamicamente via JS -->
+                    </div>
+                    
+                    <div class="loja-coluna-titulo" style="margin-top: 4px; margin-bottom: 8px;">
+                        <h3>📝 Cadastrar / Editar Produto</h3>
+                    </div>
+                    
+                    <form id="form-produto-loja" style="display: flex; flex-direction: column; flex: 1;">
+                        <div class="form-grupo-loja">
+                            <label for="prod-nome">Nome do Produto *</label>
+                            <input type="text" id="prod-nome" class="input-loja" placeholder="Ex: NexPod Max (Fone Bluetooth)" required>
+                        </div>
+                        
+                        <div class="form-linha-dupla">
+                            <div class="form-grupo-loja">
+                                <label for="prod-preco">Preço Original *</label>
+                                <input type="number" id="prod-preco" class="input-loja" step="0.01" min="0.01" placeholder="Ex: 299.90" required>
+                            </div>
+                            <div class="form-grupo-loja">
+                                <label for="prod-promo">Preço Promocional (Opcional)</label>
+                                <input type="number" id="prod-promo" class="input-loja" step="0.01" min="0.01" placeholder="Ex: 249.90">
+                            </div>
+                        </div>
+                        
+                        <div class="form-grupo-loja">
+                            <label for="prod-prazo">Prazo e Opções de Entrega *</label>
+                            <input type="text" id="prod-prazo" class="input-loja" placeholder="Ex: Sedex: 2 a 4 dias | Grátis: 8 dias" required>
+                        </div>
+                        
+                        <div class="form-grupo-loja">
+                            <label for="prod-desc">Descrição Técnica do Produto *</label>
+                            <input type="text" id="prod-desc" class="input-loja" placeholder="Ex: Cancelamento ativo de ruído, bateria de 40 horas..." required>
+                        </div>
+                        
+                        <div class="form-grupo-loja">
+                            <label for="prod-gatilhos">Diferencial / Argumento de Venda (Gatilhos)</label>
+                            <input type="text" id="prod-gatilhos" class="input-loja" placeholder="Ex: Campeão de vendas. Isole 98% dos ruídos...">
+                        </div>
+                        
+                        <div class="form-acoes-loja">
+                            <button type="button" id="botao-cancelar-edicao-produto" class="botao-loja-cancelar" style="display: none;">Cancelar</button>
+                            <button type="submit" id="botao-salvar-produto" class="botao-loja-salvar">Cadastrar Produto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts modulares com defer para não bloquear renderização (Compilados em nexchat.min.js para produção) -->
+    <script src="scripts/utilitarios/constantes.js" defer></script>
+    <script src="scripts/utilitarios/auxiliares.js" defer></script>
+    <script src="scripts/utilitarios/embeds.js" defer></script>
+    <script src="scripts/servicos/armazenamentoServico.js" defer></script>
+    <script src="scripts/servicos/bancoDeDadosServico.js" defer></script>
+    <script src="scripts/servicos/openrouterServico.js" defer></script>
+    <script src="scripts/servicos/markdownServico.js" defer></script>
+    <script src="scripts/componentes/barraLateral.js" defer></script>
+    <script src="scripts/componentes/seletorModelo.js" defer></script>
+    <script src="scripts/componentes/configuracoes.js" defer></script>
+    <script src="scripts/componentes/painelLoja.js" defer></script>
+    <script src="scripts/componentes/chat.js" defer></script>
+    <script src="scripts/principal.js" defer></script>
+</body>
 </html>

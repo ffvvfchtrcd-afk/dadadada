@@ -1,0 +1,280 @@
+/* ============================================
+   NEXCHAT - Estilos da Barra Lateral
+   Sidebar, Conversas, Busca
+   ============================================ */
+
+.barra-lateral {
+    width: var(--barra-lateral-largura);
+    height: 100vh;
+    background: var(--cor-fundo-secundario);
+    border-right: 1px solid var(--cor-borda);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: var(--z-barra-lateral);
+    transition: transform var(--transicao-lenta);
+}
+
+/* Cabeçalho */
+.barra-lateral-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icone {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--gradiente-primario);
+    border-radius: var(--raio-pequeno);
+    color: white;
+}
+
+.logo-texto {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.botao-nova-conversa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--cor-fundo-terciario);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-pequeno);
+    color: var(--cor-texto-secundario);
+    cursor: pointer;
+    transition: all var(--transicao-media);
+}
+
+.botao-nova-conversa:hover {
+    background: var(--cor-primaria);
+    border-color: var(--cor-primaria);
+    color: white;
+    transform: rotate(90deg);
+}
+
+/* Busca */
+.barra-lateral-busca {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.barra-lateral-busca input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--cor-texto);
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+}
+
+.barra-lateral-busca input::placeholder {
+    color: var(--cor-texto-terciario);
+}
+
+.barra-lateral-busca svg {
+    color: var(--cor-texto-terciario);
+    flex-shrink: 0;
+}
+
+/* Lista de Conversas */
+.lista-conversas {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.conversa-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: var(--raio-pequeno);
+    cursor: pointer;
+    transition: all var(--transicao-rapida);
+    position: relative;
+    margin-bottom: 2px;
+}
+
+.conversa-item:hover {
+    background: var(--cor-fundo-terciario);
+}
+
+.conversa-item.ativa {
+    background: var(--cor-fundo-terciario);
+    border: 1px solid var(--cor-borda-ativa);
+}
+
+.conversa-item-icone {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--raio-pequeno);
+    background: var(--cor-fundo-quaternario);
+    color: var(--cor-texto-terciario);
+    flex-shrink: 0;
+    font-size: 0.9rem;
+}
+
+.conversa-item.ativa .conversa-item-icone {
+    background: var(--gradiente-primario);
+    color: white;
+}
+
+.conversa-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.conversa-item-titulo {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--cor-texto);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversa-item-preview {
+    font-size: 0.75rem;
+    color: var(--cor-texto-terciario);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.conversa-item-acoes {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transicao-rapida);
+}
+
+.conversa-item:hover .conversa-item-acoes {
+    opacity: 1;
+}
+
+.botao-excluir-conversa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: none;
+    border-radius: var(--raio-pequeno);
+    color: var(--cor-texto-terciario);
+    cursor: pointer;
+    transition: all var(--transicao-rapida);
+}
+
+.botao-excluir-conversa:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Mensagem vazia */
+.lista-vazia {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--cor-texto-terciario);
+}
+
+.lista-vazia svg {
+    margin-bottom: 12px;
+    opacity: 0.3;
+}
+
+.lista-vazia p {
+    font-size: 0.85rem;
+}
+
+/* Rodapé */
+.barra-lateral-rodape {
+    padding: 12px 20px;
+    border-top: 1px solid var(--cor-borda);
+}
+
+.botao-configuracoes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--raio-pequeno);
+    color: var(--cor-texto-secundario);
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all var(--transicao-rapida);
+}
+
+.botao-configuracoes:hover {
+    background: var(--cor-fundo-terciario);
+    color: var(--cor-texto);
+    border-color: var(--cor-borda);
+}
+
+/* Overlay mobile */
+.overlay-barra-lateral {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: calc(var(--z-barra-lateral) - 1);
+}
+
+.overlay-barra-lateral.visivel {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+/* ============================================
+   RESPONSIVIDADE
+   ============================================ */
+
+@media (max-width: 768px) {
+    .barra-lateral {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        box-shadow: var(--sombra-grande);
+    }
+    
+    .barra-lateral.aberta {
+        transform: translateX(0);
+    }
+}
