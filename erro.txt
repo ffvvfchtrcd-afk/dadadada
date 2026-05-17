@@ -1,0 +1,64 @@
+
+Esse é um aviso crítico de segurança do GitHub (Secret Scanning). Ele bloqueou o seu git push porque detectou que você está tentando enviar chaves de API da OpenRouter expostas nos arquivos keys openroute.txt e .env.
+
+Importante: Nunca envie arquivos .env ou arquivos de texto com credenciais para o GitHub, mesmo que o repositório seja privado.
+
+Como as chaves já foram incluídas no histórico do seu commit local (924ae79), apenas apagar o texto e commitar novamente não resolve, pois a chave continuará visível no histórico do Git.
+
+Aqui está o passo a passo detalhado de como resolver isso da forma correta e segura.
+
+Passo 1: Invalidar as Chaves (Urgente)
+Antes de mexer no código, acesse o painel da OpenRouter e delete/revogue essas três chaves que aparecem no print (3DrBOY..., 3DrBOb..., 3DrBOZ...). Se o GitHub as detectou, assume-se que elas correm o risco de estarem expostas. Gere novas chaves após limpar o projeto.
+
+Passo 2: Remover os arquivos do histórico do Git
+Para limpar o seu commit atual e garantir que esses arquivos sensíveis não subam, precisamos remover os arquivos do rastreamento do Git sem deletá-los do seu computador.
+
+Abra o seu terminal na pasta do projeto e execute os seguintes comandos:
+
+Remover os arquivos do índice do Git (área de stage):
+
+Bash
+git rm --cached ".env"
+git rm --cached "keys openroute.txt"
+(O parâmetro --cached garante que o arquivo continue existindo na sua máquina, mas saia do Git).
+
+Desfazer o commit local mantendo as alterações nos arquivos:
+Se você acabou de fazer o commit e ele ainda não foi para o GitHub, você pode resetar o último commit para corrigir a burrada:
+
+Bash
+git reset --soft HEAD~1
+Isso vai colocar todos os seus arquivos de volta para o estado "Staged" (prontos para commitar), permitindo que você tire o que não deve interagir com o Git.
+
+Passo 3: Configurar o .gitignore
+Para garantir que o Git nunca mais tente ler seu arquivo .env ou arquivos de texto com chaves, adicione-os ao arquivo .gitignore na raiz do seu projeto.
+
+Abra ou crie o arquivo .gitignore.
+
+Adicione as seguintes linhas:
+
+Plaintext
+.env
+keys openroute.txt
+Passo 4: Refazer o Commit e Push
+Agora que o .gitignore está configurado e as chaves foram removidas do fluxo de commit, você pode refazer o processo de envio com segurança:
+
+Adicione as mudanças legítimas (como seus códigos e o próprio .gitignore):
+
+Bash
+git add .
+Verifique com git status se o .env ou o arquivo de texto não estão listados para serem commitados.
+
+Faça o novo commit:
+
+Bash
+git commit -m "feat: setup project structure and fix gitignore"
+Envie para o repositório remoto:
+
+Bash
+git push origin main
+(Substitua main pelo nome da sua branch atual, se for o caso).
+
+⚠️ E o botão "Bypass" no print?
+Você verá que existe uma opção escrita "Bypass" ao lado de cada chave no aviso da interface.
+
+Não recomendo usar, a menos que aquelas chaves sejam intencionalmente públicas (o que não é o caso de chaves de API pagas/com cotas). Usar o Bypass vai expor seus créditos e chaves da OpenRouter publicamente se o seu repositório for ou se tornar público no futuro.
