@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const parsed = req.body;
+    const parsed = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     
     // Obtém o token de forma híbrida: prioriza Variável de Ambiente (Vercel) e faz fallback para o arquivo local
     let token = process.env.VITE_MP_ACCESS_TOKEN || process.env.MP_ACCESS_TOKEN;
