@@ -58,10 +58,25 @@ export const aiContextService = {
             preco: Number(v.preco) || 0,
             metodoEntrega: v.metodoEntrega || v.estoque_tipo || 'MANUAL',
             status: v.status || 'ATIVO',
-            quantidadeStock: Number(v.quantidadeStock) || 0
+            quantidadeStock: Number(v.quantidadeStock) || 0,
+            stockData: v.stockData || []
           }))
         };
       });
+
+      // Últimas 15 entregas concluídas / aprovadas
+      const entregasRecentes = validOrders
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 15)
+        .map(o => ({
+          id: o.id,
+          cliente: o.userName || 'Cliente',
+          produto: `${o.productName} - ${o.variationName}`,
+          total: Number(o.total) || 0,
+          status: o.status,
+          entregue: o.deliveryContent || [],
+          data: o.date
+        }));
 
       return {
         estatisticas: {
@@ -75,14 +90,16 @@ export const aiContextService = {
           }
         },
         categorias: categories.map(c => ({ id: c.id, nome: c.nome, status: c.status || 'ATIVO' })),
-        produtos: productsWithVariations
+        produtos: productsWithVariations,
+        entregasRecentes
       };
     } catch (error) {
       console.error("Erro ao obter contexto consolidado para a IA:", error);
       return {
         estatisticas: { hoje: { vendas: 0, faturamento: 0 }, ontem: { vendas: 0, faturamento: 0 } },
         categorias: [],
-        produtos: []
+        produtos: [],
+        entregasRecentes: []
       };
     }
   }

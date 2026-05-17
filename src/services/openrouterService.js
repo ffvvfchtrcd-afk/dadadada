@@ -231,6 +231,8 @@ ${JSON.stringify(contextoConsolidado, null, 2)}
    
    [ADMIN_ACTION] {"comando": "CARREGAR_ESTOQUE", "parametros": {"variationId": "ID_EXATO_DA_VARIACAO", "lines": ["linha1", "linha2"]}}
 
+   [ADMIN_ACTION] {"comando": "REMOVER_ITENS_ESTOQUE", "parametros": {"variationId": "ID_EXATO_DA_VARIACAO", "lines": ["linha1_para_remover"]}}
+
    [ADMIN_ACTION] {"comando": "CRIAR_PRODUTO", "parametros": {"nome": "Nome do Produto", "categoriaId": "ID_DA_CATEGORIA", "preco": 29.90, "metodoEntrega": "AUTOMATICA" | "MANUAL" | "AGENTE", "miniDesc": "Descrição opcional"}}
 
    [ADMIN_ACTION] {"comando": "DELETAR_PRODUTO", "parametros": {"id": "ID_DO_PRODUTO_OU_VARIACAO", "tipo": "produto" | "variacao"}}

@@ -209,6 +209,34 @@ export const aiActionService = {
           };
         }
 
+        case 'REMOVER_ITENS_ESTOQUE': {
+          const { variationId, lines } = payload;
+          if (!variationId) throw new Error("ID da variação não fornecido.");
+          if (!lines || !Array.isArray(lines) || lines.length === 0) {
+            throw new Error("Linhas para remover não especificadas.");
+          }
+
+          const variations = await api.get('variacoes');
+          const variation = variations.find(v => String(v.id) === String(variationId));
+          if (!variation) throw new Error(`Variação de ID ${variationId} não encontrada.`);
+
+          const currentStock = variation.stockData || [];
+          const updatedStock = currentStock.filter(item => !lines.includes(item));
+          const removedCount = currentStock.length - updatedStock.length;
+
+          const result = await api.patch(`variacoes/${variationId}`, {
+            stockData: updatedStock,
+            quantidadeStock: updatedStock.length,
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            message: `Removido com sucesso ${removedCount} conta(s) do estoque da variação ${variation.nome || variationId}!`,
+            data: result
+          };
+        }
+
         default:
           throw new Error(`Ação '${actionName}' não reconhecida pelo sistema de IA.`);
       }
