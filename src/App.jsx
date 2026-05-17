@@ -30,11 +30,11 @@ function PageLoader() {
 function App() {
   return (
     <Routes>
+      <Route path="/admin/copilot" element={<Suspense fallback={<PageLoader />}><CopilotPage /></Suspense>} />
       <Route path="/" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin" replace />} />
         <Route path="admin" element={<Suspense fallback={<PageLoader />}><DashboardHome /></Suspense>} />
         <Route path="admin/analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
-        <Route path="admin/copilot" element={<Suspense fallback={<PageLoader />}><CopilotPage /></Suspense>} />
         <Route path="admin/categories" element={<Suspense fallback={<PageLoader />}><CategoriesList /></Suspense>} />
         <Route path="admin/products" element={<Suspense fallback={<PageLoader />}><ProductsList /></Suspense>} />
         <Route path="admin/products/new" element={<Suspense fallback={<PageLoader />}><ProductForm /></Suspense>} />

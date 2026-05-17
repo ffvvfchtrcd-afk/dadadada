@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, Bot, User, RefreshCw, Play, CheckCircle2,
   AlertTriangle, Key, Cpu, History, Trash2, X, Terminal,
-  Paperclip, FileSpreadsheet, Pin, Plus, MessageSquare, Columns, HelpCircle
+  Paperclip, FileSpreadsheet, Pin, Plus, MessageSquare, Columns, HelpCircle, ArrowLeft
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { openrouterService } from '../../../services/openrouterService';
 import { aiActionService } from '../../../services/aiActionService';
 
@@ -114,7 +115,7 @@ export default function Copilot() {
   };
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [model, setModel] = useState('openrouter/free');
+  const [model, setModel] = useState('google/gemini-2.0-flash-lite-preview-02-05:free');
   const [modelsList, setModelsList] = useState([]);
   const [actionLogs, setActionLogs] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -259,9 +260,6 @@ export default function Copilot() {
       }
     };
     fetchModels();
-
-    const savedKey = localStorage.getItem('nexmarket_openrouter_key') || '';
-    setCustomKey(savedKey);
 
     const savedLogs = JSON.parse(localStorage.getItem('nexmarket_ai_logs') || '[]');
     setActionLogs(savedLogs);
@@ -613,14 +611,31 @@ export default function Copilot() {
     handleSendToThread(splitThreadId, false);
   };
 
+  const navigate = useNavigate();
+
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-dark-950 text-gray-100 relative">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-dark-950 text-gray-100 relative">
       
+      {/* Mobile Overlay para Sidebar */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar de Canais e Conversas */}
-      <div className="w-64 bg-dark-900/60 border-r border-dark-600/30 flex flex-col h-full z-20 backdrop-blur-xl">
+      <div className={`absolute md:relative z-40 w-[85vw] sm:w-72 md:w-64 bg-dark-900 md:bg-dark-900/60 border-r border-dark-600/30 flex flex-col h-full backdrop-blur-xl transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:hidden'}`}>
         {/* Cabeçalho da Sidebar */}
         <div className="p-4 border-b border-dark-600/30 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Conversas da IA</span>
+          <button
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white transition-colors group"
+            title="Voltar ao Dashboard Principal"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            Sair
+          </button>
           <button
             onClick={handleCreateThread}
             className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all active:scale-95"
@@ -777,40 +792,43 @@ export default function Copilot() {
       </div>
       
       {/* Container Principal do Chat (e Split View) */}
-      <div className="flex-1 flex h-full overflow-hidden relative z-10">
+      <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden relative z-10">
         
         {/* Lado Esquerdo (Main Chat) */}
-        <div className={`flex flex-col h-full relative border-r border-dark-600/30 ${splitThreadId ? 'w-1/2' : 'w-full'}`}>
+        <div className={`flex flex-col h-full relative border-r border-dark-600/30 ${splitThreadId ? 'h-1/2 md:h-full md:w-1/2 flex-shrink-0 md:flex-shrink' : 'h-full w-full'}`}>
           
           {/* Cabeçalho do Chat */}
-          <div className="h-16 border-b border-dark-600/30 flex items-center justify-between px-6 bg-dark-800/20 backdrop-blur-xl flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/10">
-                <Sparkles className="w-5 h-5 text-white animate-pulse" />
+          <div className="h-auto min-h-[64px] py-3 md:h-16 md:py-0 border-b border-dark-600/30 flex flex-col xl:flex-row items-start xl:items-center justify-between px-4 md:px-6 bg-dark-800/20 backdrop-blur-xl flex-shrink-0 gap-3 xl:gap-0 overflow-x-hidden">
+            <div className="flex items-center gap-3 w-full xl:w-auto">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="md:hidden p-2 rounded-xl bg-dark-700/30 border border-dark-600/30 text-gray-400 hover:text-cyan-400"
+              >
+                <History className="w-5 h-5" />
+              </button>
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/10 flex-shrink-0">
+                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white animate-pulse" />
               </div>
-              <div>
-                <h1 className="font-semibold text-gray-100 flex items-center gap-2">
-                  IA Admin Copiloto
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <div className="flex-1 min-w-0">
+                <h1 className="font-semibold text-gray-100 flex items-center gap-2 text-sm md:text-base truncate">
+                  <span className="truncate">IA Copiloto</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hidden sm:inline-block flex-shrink-0">
                     ATIVO
                   </span>
-                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    v1.3.2
-                  </span>
                 </h1>
-                <p className="text-xs text-gray-500">Superpoderes de controle e auditoria baseados em OpenRouter</p>
+                <p className="text-[10px] md:text-xs text-gray-500 truncate">Superpoderes OpenRouter</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto pb-1 xl:pb-0">
               {/* Botão Guia de Recursos da IA */}
               <button
                 onClick={() => setShowFeaturesModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-all font-semibold text-xs active:scale-95 shadow-sm shadow-cyan-500/5"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-all font-semibold text-xs active:scale-95 shadow-sm shadow-cyan-500/5 whitespace-nowrap"
                 title="Ver tudo o que a IA pode fazer"
               >
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>O QUE FAÇO?</span>
+                <HelpCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">O QUE FAÇO?</span>
               </button>
 
               {/* Seletor de Chave da Thread Ativa */}
@@ -835,6 +853,17 @@ export default function Copilot() {
                     </option>
                   ))}
                 </select>
+                <div className="w-px h-3 bg-dark-600/50 mx-1"></div>
+                <input
+                  type="password"
+                  placeholder="Cole a API Key..."
+                  value={apiKeys.find(k => k.id === (activeThread?.keyId || 'key-default'))?.value || ''}
+                  onChange={(e) => {
+                    const currentId = activeThread?.keyId || 'key-default';
+                    setApiKeys(prev => prev.map(k => k.id === currentId ? { ...k, value: e.target.value } : k));
+                  }}
+                  className="bg-transparent border-none outline-none text-gray-400 text-[10px] w-24 focus:w-48 placeholder-gray-600 focus:text-gray-200 transition-all font-mono"
+                />
               </div>
 
               {/* Seletor de Modelo */}
@@ -845,8 +874,8 @@ export default function Copilot() {
                   onChange={(e) => setModel(e.target.value)}
                   className="bg-transparent text-gray-300 focus:outline-none cursor-pointer font-medium"
                 >
-                  {modelsList.map(m => (
-                    <option key={m.id} value={m.id} className="bg-dark-800 text-gray-200">
+                  {modelsList.map((m, index) => (
+                    <option key={`${m.id}-${index}`} value={m.id} className="bg-dark-800 text-gray-200">
                       {m.nome}
                     </option>
                   ))}
@@ -866,7 +895,7 @@ export default function Copilot() {
               {/* Alternar Sidebar */}
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`p-2 rounded-xl border border-dark-600/30 transition-all ${
+                className={`hidden md:flex p-2 rounded-xl border border-dark-600/30 transition-all ${
                   isSidebarOpen ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-dark-700/10 hover:bg-dark-700/50 text-gray-400'
                 }`}
               >
@@ -1025,7 +1054,7 @@ export default function Copilot() {
 
         {/* Lado Direito (Split Chat) */}
         {splitThreadId && (
-          <div className="w-1/2 flex flex-col h-full bg-dark-950/20 backdrop-blur-sm relative border-l border-dark-600/40">
+          <div className="w-full md:w-1/2 h-1/2 md:h-full flex flex-col bg-dark-950/20 backdrop-blur-sm relative border-t md:border-t-0 md:border-l border-dark-600/40 flex-shrink-0 md:flex-shrink">
             
             {/* Cabeçalho do Chat Split */}
             <div className="h-16 border-b border-dark-600/30 flex items-center justify-between px-6 bg-dark-800/10 backdrop-blur-md flex-shrink-0">
@@ -1067,6 +1096,17 @@ export default function Copilot() {
                       </option>
                     ))}
                   </select>
+                  <div className="w-px h-2.5 bg-dark-600/50 mx-1"></div>
+                  <input
+                    type="password"
+                    placeholder="Cole a API Key..."
+                    value={apiKeys.find(k => k.id === (splitActiveThread?.keyId || 'key-default'))?.value || ''}
+                    onChange={(e) => {
+                      const currentId = splitActiveThread?.keyId || 'key-default';
+                      setApiKeys(prev => prev.map(k => k.id === currentId ? { ...k, value: e.target.value } : k));
+                    }}
+                    className="bg-transparent border-none outline-none text-gray-400 text-[10px] w-16 focus:w-32 placeholder-gray-600 focus:text-gray-200 transition-all font-mono"
+                  />
                 </div>
 
                 {/* Botão de Fechar Split View */}

@@ -82,17 +82,19 @@ export const openrouterService = {
     this._abortController = new AbortController();
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'NexMarket Copilot'
         },
         body: JSON.stringify({
-          modelo: modelo || 'openrouter/free',
-          mensagens: mensagensFormatadas,
-          temperatura: opcoes.temperatura ?? 0.3,
-          maxTokens: opcoes.maxTokens ?? 2048,
+          model: modelo || 'google/gemini-2.0-flash-lite-preview-02-05:free',
+          messages: mensagensFormatadas,
+          temperature: opcoes.temperatura ?? 0.3,
+          max_tokens: opcoes.maxTokens ?? 2048,
           stream: true
         }),
         signal: this._abortController.signal
@@ -172,19 +174,25 @@ export const openrouterService = {
 
       return [
         {
-          id: 'openrouter/free',
-          nome: 'Auto (Modelo Gratuito Aleatório)',
-          descricao: 'O OpenRouter escolhe automaticamente um modelo gratuito online para você',
-          org: 'OpenRouter'
+          id: 'google/gemini-2.0-flash-lite-preview-02-05:free',
+          nome: 'Gemini 2.0 Flash Lite (Rápido e Preciso)',
+          descricao: 'Equilíbrio perfeito entre velocidade extrema e inteligência.',
+          org: 'Google'
+        },
+        {
+          id: 'meta-llama/llama-3.3-70b-instruct:free',
+          nome: 'Llama 3.3 70B (Alta Performance)',
+          descricao: 'Modelo altamente capaz, perfeito para não errar nada.',
+          org: 'Meta'
         },
         ...mapped
       ];
     } catch (e) {
       console.warn("Erro ao carregar modelos dinâmicos do OpenRouter, carregando fallbacks:", e);
       return [
-        { id: 'openrouter/free', nome: 'Auto (Modelo Gratuito Aleatório)', org: 'OpenRouter' },
+        { id: 'google/gemini-2.0-flash-lite-preview-02-05:free', nome: 'Gemini 2.0 Flash Lite (Google)', org: 'Google' },
+        { id: 'meta-llama/llama-3.3-70b-instruct:free', nome: 'Llama 3.3 70B (Meta)', org: 'Meta' },
         { id: 'google/gemma-2-9b-it:free', nome: 'Gemma 2 9B (Google)', org: 'Google' },
-        { id: 'meta-llama/llama-3-8b-instruct:free', nome: 'Llama 3 8B (Meta)', org: 'Meta' },
         { id: 'qwen/qwen-2-7b-instruct:free', nome: 'Qwen 2 7B (Alibaba)', org: 'Qwen' }
       ];
     }
