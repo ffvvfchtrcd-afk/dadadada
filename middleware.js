@@ -11,6 +11,11 @@ const COOKIE_NAME = 'admin_ip_bypass_token';
 export function middleware(request) {
   const url = new URL(request.url);
   
+  // Só protege rotas do Painel Administrativo (/admin e sub-rotas)
+  if (!url.pathname.startsWith('/admin')) {
+    return; // Passa direto para rotas públicas (loja, pagamentos, etc.)
+  }
+  
   // Captura o IP que está acessando a Vercel através dos cabeçalhos padrão HTTP de borda
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
   
