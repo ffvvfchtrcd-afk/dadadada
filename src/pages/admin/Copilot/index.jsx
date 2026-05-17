@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, Bot, User, RefreshCw, Play, CheckCircle2,
   AlertTriangle, Key, Cpu, History, Trash2, X, Terminal,
-  Paperclip, FileSpreadsheet, Pin, Plus, MessageSquare, Columns
+  Paperclip, FileSpreadsheet, Pin, Plus, MessageSquare, Columns, HelpCircle
 } from 'lucide-react';
 import { openrouterService } from '../../../services/openrouterService';
 import { aiActionService } from '../../../services/aiActionService';
@@ -119,6 +119,7 @@ export default function Copilot() {
   const [actionLogs, setActionLogs] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
   const [currentActionFeedback, setCurrentActionFeedback] = useState(null);
   const [attachedFile, setAttachedFile] = useState(null); // { name: '', size: '', content: '' }
 
@@ -130,8 +131,11 @@ export default function Copilot() {
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  
   const splitMessagesEndRef = useRef(null);
   const splitFileInputRef = useRef(null);
+  const splitChatContainerRef = useRef(null);
 
   // Múltiplas Chaves de API do OpenRouter
   const [apiKeys, setApiKeys] = useState(() => {
@@ -263,17 +267,30 @@ export default function Copilot() {
     setActionLogs(savedLogs);
   }, []);
 
-  // Rolagem automática do chat principal
+  // Rolagem automática inteligente do chat principal
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+    
+    // Só força o scroll se o usuário já estiver próximo do fim
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages, loading]);
 
-  // Rolagem automática do chat split (dividido)
+  // Rolagem automática inteligente do chat split (dividido)
   const splitActiveThread = threads.find(t => t.id === splitThreadId);
   const splitMessages = splitActiveThread ? splitActiveThread.messages : [];
 
   useEffect(() => {
-    splitMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!splitChatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = splitChatContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+    
+    if (isNearBottom) {
+      splitMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [splitMessages, splitLoading]);
 
   // Adicionar nova chave de API
@@ -759,213 +776,427 @@ export default function Copilot() {
         </div>
       </div>
       
-      {/* Container Principal do Chat */}
-      <div className="flex-1 flex flex-col h-full relative z-10 border-r border-dark-600/30">
+      {/* Container Principal do Chat (e Split View) */}
+      <div className="flex-1 flex h-full overflow-hidden relative z-10">
         
-        {/* Cabeçalho do Chat */}
-        <div className="h-16 border-b border-dark-600/30 flex items-center justify-between px-6 bg-dark-800/20 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/10">
-              <Sparkles className="w-5 h-5 text-white animate-pulse" />
+        {/* Lado Esquerdo (Main Chat) */}
+        <div className={`flex flex-col h-full relative border-r border-dark-600/30 ${splitThreadId ? 'w-1/2' : 'w-full'}`}>
+          
+          {/* Cabeçalho do Chat */}
+          <div className="h-16 border-b border-dark-600/30 flex items-center justify-between px-6 bg-dark-800/20 backdrop-blur-xl flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/10">
+                <Sparkles className="w-5 h-5 text-white animate-pulse" />
+              </div>
+              <div>
+                <h1 className="font-semibold text-gray-100 flex items-center gap-2">
+                  IA Admin Copiloto
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    ATIVO
+                  </span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    v1.3.1
+                  </span>
+                </h1>
+                <p className="text-xs text-gray-500">Superpoderes de controle e auditoria baseados em OpenRouter</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-semibold text-gray-100 flex items-center gap-2">
-                IA Admin Copiloto
-                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  ATIVO
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  v1.2
-                </span>
-              </h1>
-              <p className="text-xs text-gray-500">Superpoderes de controle e auditoria baseados em OpenRouter</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {/* Seletor de Modelo */}
-            <div className="flex items-center gap-2 bg-dark-700/30 border border-dark-600/30 px-3 py-1.5 rounded-xl text-xs">
-              <Cpu className="w-3.5 h-3.5 text-gray-400" />
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="bg-transparent text-gray-300 focus:outline-none cursor-pointer font-medium"
+            <div className="flex items-center gap-2">
+              {/* Botão Guia de Recursos da IA */}
+              <button
+                onClick={() => setShowFeaturesModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-all font-semibold text-xs active:scale-95 shadow-sm shadow-cyan-500/5"
+                title="Ver tudo o que a IA pode fazer"
               >
-                {modelsList.map(m => (
-                  <option key={m.id} value={m.id} className="bg-dark-800 text-gray-200">
-                    {m.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>O QUE FAÇO?</span>
+              </button>
 
-            {/* Configurar Chave */}
-            <button
-              onClick={() => setShowKeyModal(true)}
-              className="p-2 rounded-xl border border-dark-600/30 bg-dark-700/10 hover:bg-dark-700/50 text-gray-400 hover:text-cyan-400 transition-all"
-              title="Chave de API Customizada"
-            >
-              <Key className="w-4 h-4" />
-            </button>
-
-            {/* Alternar Sidebar */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className={`p-2 rounded-xl border border-dark-600/30 transition-all ${
-                isSidebarOpen ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-dark-700/10 hover:bg-dark-700/50 text-gray-400'
-              }`}
-            >
-              <History className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Notificação de Feedback de Ações Administradas */}
-        <AnimatePresence>
-          {currentActionFeedback && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-18 left-6 right-6 z-50 rounded-2xl border p-4 shadow-xl backdrop-blur-xl flex items-center justify-between gap-4 bg-dark-800/90 border-cyan-500/30 shadow-cyan-500/5"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
-                  <Terminal className="w-4 h-4 text-cyan-400" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                    Comando de Banco Detectado
-                  </h4>
-                  <p className="text-sm text-gray-200 mt-0.5">{currentActionFeedback.message}</p>
-                </div>
+              {/* Seletor de Chave da Thread Ativa */}
+              <div className="flex items-center gap-2 bg-dark-700/30 border border-dark-600/30 px-3 py-1.5 rounded-xl text-xs">
+                <Key className="w-3.5 h-3.5 text-gray-400" />
+                <select
+                  value={activeThread?.keyId || 'key-default'}
+                  onChange={(e) => {
+                    const newKeyId = e.target.value;
+                    setThreads(prev => prev.map(t => {
+                      if (t.id === currentThreadId) {
+                        return { ...t, keyId: newKeyId };
+                      }
+                      return t;
+                    }));
+                  }}
+                  className="bg-transparent text-gray-300 focus:outline-none cursor-pointer font-medium"
+                >
+                  {apiKeys.map(k => (
+                    <option key={k.id} value={k.id} className="bg-dark-800 text-gray-200">
+                      {k.name} ({k.value ? 'Configurada' : 'Vazia'})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {currentActionFeedback.status === 'executing' ? (
-                <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
-              ) : currentActionFeedback.status === 'success' ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {/* Seletor de Modelo */}
+              <div className="flex items-center gap-2 bg-dark-700/30 border border-dark-600/30 px-3 py-1.5 rounded-xl text-xs">
+                <Cpu className="w-3.5 h-3.5 text-gray-400" />
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="bg-transparent text-gray-300 focus:outline-none cursor-pointer font-medium"
+                >
+                  {modelsList.map(m => (
+                    <option key={m.id} value={m.id} className="bg-dark-800 text-gray-200">
+                      {m.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Zona de Mensagens do Chat */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.role !== 'user' && (
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0 text-cyan-400">
-                  <Bot className="w-4 h-4" />
-                </div>
-              )}
+              {/* Configurar Chave */}
+              <button
+                onClick={() => setShowKeyModal(true)}
+                className="p-2 rounded-xl border border-dark-600/30 bg-dark-700/10 hover:bg-dark-700/50 text-gray-400 hover:text-cyan-400 transition-all flex items-center gap-1.5"
+                title="Gerenciador de Chaves de API"
+              >
+                <Key className="w-4 h-4" />
+                <span className="text-[10px] font-bold text-gray-400">CHAVES</span>
+              </button>
 
-              <div
-                className={`max-w-[75%] rounded-2xl p-4 shadow-md ${
-                  msg.role === 'user'
-                    ? 'bg-gradient-to-br from-cyan-600 to-indigo-600 text-white rounded-tr-none'
-                    : 'bg-dark-800/40 border border-dark-600/30 rounded-tl-none'
+              {/* Alternar Sidebar */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`p-2 rounded-xl border border-dark-600/30 transition-all ${
+                  isSidebarOpen ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' : 'bg-dark-700/10 hover:bg-dark-700/50 text-gray-400'
                 }`}
               >
-                <div 
-                  className="prose prose-invert max-w-none text-sm"
-                  dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(msg.content) }}
-                />
-              </div>
-
-              {msg.role === 'user' && (
-                <div className="w-9 h-9 rounded-xl bg-dark-700 border border-dark-600/50 flex items-center justify-center flex-shrink-0 text-gray-300">
-                  <User className="w-4 h-4" />
-                </div>
-              )}
+                <History className="w-4 h-4" />
+              </button>
             </div>
-          ))}
+          </div>
 
-          {loading && messages[messages.length - 1]?.content === '' && (
-            <div className="flex gap-4 justify-start">
-              <div className="w-9 h-9 rounded-xl bg-dark-800/60 border border-dark-600/30 flex items-center justify-center flex-shrink-0 text-cyan-400">
-                <Bot className="w-4 h-4 animate-spin" />
-              </div>
-              <div className="bg-dark-800/20 border border-dark-600/30 rounded-2xl rounded-tl-none p-4 max-w-[75%] flex items-center gap-2 text-sm text-gray-400">
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>IA está compilando dados e digitando...</span>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input de Mensagem */}
-        <div className="p-6 border-t border-dark-600/30 bg-dark-800/10 backdrop-blur-xl relative">
-          
-          {/* floating file pill */}
+          {/* Notificação de Feedback de Ações Administradas */}
           <AnimatePresence>
-            {attachedFile && (
+            {currentActionFeedback && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute -top-12 left-6 right-6 p-3 bg-dark-800/90 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-4 text-xs backdrop-blur-md shadow-lg"
+                exit={{ opacity: 0, y: -20 }}
+                className="absolute top-18 left-6 right-6 z-50 rounded-2xl border p-4 shadow-xl backdrop-blur-xl flex items-center justify-between gap-4 bg-dark-800/90 border-cyan-500/30 shadow-cyan-500/5"
               >
-                <div className="flex items-center gap-2 text-emerald-400">
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span className="font-semibold text-gray-200">{attachedFile.name}</span>
-                  <span className="text-gray-500">({attachedFile.size})</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                    <Terminal className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+                      Comando de Banco Detectado
+                    </h4>
+                    <p className="text-sm text-gray-200 mt-0.5">{currentActionFeedback.message}</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAttachedFile(null)}
-                  className="p-1 text-gray-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-all"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+
+                {currentActionFeedback.status === 'executing' ? (
+                  <RefreshCw className="w-4 h-4 text-cyan-400 animate-spin flex-shrink-0" />
+                ) : currentActionFeedback.status === 'success' ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSend} className="flex gap-3 relative items-center">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".csv,.txt"
-              className="hidden"
-            />
-            
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => fileInputRef.current?.click()}
-              className="p-4 rounded-xl bg-dark-800/60 border border-dark-600/30 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-50 transition-all flex items-center justify-center"
-              title="Anexar arquivo CSV ou TXT"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
+          {/* Zona de Mensagens do Chat Zone */}
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}
+              >
+                {msg.role !== 'user' && (
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0 text-cyan-400">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                )}
 
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={loading ? 'IA está processando...' : 'Cole o CSV, anexe um arquivo ou peça para importar produtos...'}
-              disabled={loading}
-              className="flex-1 bg-dark-800/50 border border-dark-600/30 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 text-gray-100 placeholder-gray-500 disabled:opacity-50 transition-all"
-            />
-            <button
-              type="submit"
-              disabled={loading || (!input.trim() && !attachedFile)}
-              className="px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-sm flex items-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 shadow-lg shadow-cyan-500/10 active:scale-95 transition-all"
-            >
-              <span>Enviar</span>
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
+                <div
+                  className={`max-w-[85%] rounded-2xl p-4 shadow-md overflow-hidden ${
+                    msg.role === 'user'
+                      ? 'bg-gradient-to-br from-cyan-600 to-indigo-600 text-white rounded-tr-none'
+                      : 'bg-dark-800/40 border border-dark-600/30 rounded-tl-none'
+                  }`}
+                >
+                  <div 
+                    className="prose prose-invert max-w-none text-sm break-words overflow-x-auto custom-scrollbar"
+                    dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(msg.content) }}
+                  />
+                </div>
+
+                {msg.role === 'user' && (
+                  <div className="w-9 h-9 rounded-xl bg-dark-700 border border-dark-600/50 flex items-center justify-center flex-shrink-0 text-gray-300">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {loading && messages[messages.length - 1]?.content === '' && (
+              <div className="flex gap-4 justify-start">
+                <div className="w-9 h-9 rounded-xl bg-dark-800/60 border border-dark-600/30 flex items-center justify-center flex-shrink-0 text-cyan-400">
+                  <Bot className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="bg-dark-800/20 border border-dark-600/30 rounded-2xl rounded-tl-none p-4 max-w-[75%] flex items-center gap-2 text-sm text-gray-400">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>IA está compilando dados e digitando...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input de Mensagem */}
+          <div className="p-6 border-t border-dark-600/30 bg-dark-800/10 backdrop-blur-xl relative flex-shrink-0">
+            
+            {/* floating file pill */}
+            <AnimatePresence>
+              {attachedFile && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute -top-12 left-6 right-6 p-3 bg-dark-800/90 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-4 text-xs backdrop-blur-md shadow-lg"
+                >
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span className="font-semibold text-gray-200">{attachedFile.name}</span>
+                    <span className="text-gray-500">({attachedFile.size})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedFile(null)}
+                    className="p-1 text-gray-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <form onSubmit={handleSend} className="flex gap-3 relative items-center">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv,.txt"
+                className="hidden"
+              />
+              
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => fileInputRef.current?.click()}
+                className="p-4 rounded-xl bg-dark-800/60 border border-dark-600/30 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-50 transition-all flex items-center justify-center flex-shrink-0"
+                title="Anexar arquivo CSV ou TXT"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={loading ? 'IA está processando...' : 'Cole o CSV, anexe um arquivo ou peça para importar produtos...'}
+                disabled={loading}
+                className="flex-1 bg-dark-800/50 border border-dark-600/30 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 text-gray-100 placeholder-gray-500 disabled:opacity-50 transition-all"
+              />
+              <button
+                type="submit"
+                disabled={loading || (!input.trim() && !attachedFile)}
+                className="px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-sm flex items-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 shadow-lg shadow-cyan-500/10 active:scale-95 transition-all flex-shrink-0"
+              >
+                <span>Enviar</span>
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
         </div>
+
+        {/* Lado Direito (Split Chat) */}
+        {splitThreadId && (
+          <div className="w-1/2 flex flex-col h-full bg-dark-950/20 backdrop-blur-sm relative border-l border-dark-600/40">
+            
+            {/* Cabeçalho do Chat Split */}
+            <div className="h-16 border-b border-dark-600/30 flex items-center justify-between px-6 bg-dark-800/10 backdrop-blur-md flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                  <Columns className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-200 text-xs flex items-center gap-1.5">
+                    {splitActiveThread?.title}
+                    {splitActiveThread?.isPermanent && (
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">FIXADO</span>
+                    )}
+                  </h3>
+                  <p className="text-[10px] text-gray-500">Visualização Simultânea / Tela Dividida</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Seletor de Chave da Thread Split */}
+                <div className="flex items-center gap-1.5 bg-dark-700/30 border border-dark-600/30 px-2 py-1 rounded-lg text-[10px]">
+                  <Key className="w-3 h-3 text-gray-400" />
+                  <select
+                    value={splitActiveThread?.keyId || 'key-default'}
+                    onChange={(e) => {
+                      const newKeyId = e.target.value;
+                      setThreads(prev => prev.map(t => {
+                        if (t.id === splitThreadId) {
+                          return { ...t, keyId: newKeyId };
+                        }
+                        return t;
+                      }));
+                    }}
+                    className="bg-transparent text-gray-300 focus:outline-none cursor-pointer font-medium"
+                  >
+                    {apiKeys.map(k => (
+                      <option key={k.id} value={k.id} className="bg-dark-800 text-gray-200">
+                        {k.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Botão de Fechar Split View */}
+                <button
+                  onClick={() => setSplitThreadId(null)}
+                  className="p-1.5 rounded-lg hover:bg-dark-700/50 text-gray-400 hover:text-gray-200 transition-all active:scale-95"
+                  title="Fechar Tela Dividida"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Zona de Mensagens do Chat Split */}
+            <div ref={splitChatContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 custom-scrollbar">
+              {splitMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}
+                >
+                  {msg.role !== 'user' && (
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0 text-cyan-400">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                  )}
+
+                  <div
+                    className={`max-w-[85%] rounded-2xl p-4 shadow-md overflow-hidden ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-br from-cyan-600 to-indigo-600 text-white rounded-tr-none'
+                        : 'bg-dark-800/40 border border-dark-600/30 rounded-tl-none'
+                    }`}
+                  >
+                    <div 
+                      className="prose prose-invert max-w-none text-sm break-words overflow-x-auto custom-scrollbar"
+                      dangerouslySetInnerHTML={{ __html: parseSimpleMarkdown(msg.content) }}
+                    />
+                  </div>
+
+                  {msg.role === 'user' && (
+                    <div className="w-9 h-9 rounded-xl bg-dark-700 border border-dark-600/50 flex items-center justify-center flex-shrink-0 text-gray-300">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {splitLoading && splitMessages[splitMessages.length - 1]?.content === '' && (
+                <div className="flex gap-4 justify-start">
+                  <div className="w-9 h-9 rounded-xl bg-dark-800/60 border border-dark-600/30 flex items-center justify-center flex-shrink-0 text-cyan-400">
+                    <Bot className="w-4 h-4 animate-spin" />
+                  </div>
+                  <div className="bg-dark-800/20 border border-dark-600/30 rounded-2xl rounded-tl-none p-4 max-w-[75%] flex items-center gap-2 text-sm text-gray-400">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>IA está compilando dados e digitando...</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={splitMessagesEndRef} />
+            </div>
+
+            {/* Input de Mensagem do Chat Split */}
+            <div className="p-6 border-t border-dark-600/30 bg-dark-800/10 backdrop-blur-xl relative flex-shrink-0">
+              
+              {/* Floating File Pill do Chat Split */}
+              <AnimatePresence>
+                {splitAttachedFile && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute -top-12 left-6 right-6 p-3 bg-dark-800/90 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-4 text-xs backdrop-blur-md shadow-lg"
+                  >
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span className="font-semibold text-gray-200">{splitAttachedFile.name}</span>
+                      <span className="text-gray-500">({splitAttachedFile.size})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSplitAttachedFile(null)}
+                      className="p-1 text-gray-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleSplitSend} className="flex gap-3 relative items-center">
+                <input
+                  type="file"
+                  ref={splitFileInputRef}
+                  onChange={handleSplitFileChange}
+                  accept=".csv,.txt"
+                  className="hidden"
+                />
+                
+                <button
+                  type="button"
+                  disabled={splitLoading}
+                  onClick={() => splitFileInputRef.current?.click()}
+                  className="p-4 rounded-xl bg-dark-800/60 border border-dark-600/30 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-50 transition-all flex items-center justify-center flex-shrink-0"
+                  title="Anexar arquivo CSV ou TXT"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
+                <input
+                  type="text"
+                  value={splitInput}
+                  onChange={(e) => setSplitInput(e.target.value)}
+                  placeholder={splitLoading ? 'IA está processando...' : 'Fale simultaneamente nesta conversa...'}
+                  disabled={splitLoading}
+                  className="flex-1 bg-dark-800/50 border border-dark-600/30 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 text-gray-100 placeholder-gray-500 disabled:opacity-50 transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={splitLoading || (!splitInput.trim() && !splitAttachedFile)}
+                  className="px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-sm flex items-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 shadow-lg shadow-cyan-500/10 active:scale-95 transition-all flex-shrink-0"
+                >
+                  <span>Enviar</span>
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
+
+          </div>
+        )}
       </div>
 
       {/* Barra Lateral de Auditoria de Ações */}
@@ -1117,6 +1348,138 @@ export default function Copilot() {
                   className="px-4 py-2 rounded-xl border border-dark-600 text-xs font-semibold text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-all"
                 >
                   Concluído
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Guia de Recursos da IA */}
+      <AnimatePresence>
+        {showFeaturesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl p-6 rounded-2xl bg-dark-800 border border-dark-600/50 shadow-2xl relative max-h-[85vh] flex flex-col"
+            >
+              <button
+                onClick={() => setShowFeaturesModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-dark-700 text-gray-400 hover:text-gray-200 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-200">Guia de Recursos do Copiloto</h3>
+                  <p className="text-xs text-gray-500 font-medium">Tudo o que a inteligência artificial do NexMarket pode fazer por você</p>
+                </div>
+              </div>
+
+              {/* Grid de Recursos */}
+              <div className="flex-1 overflow-y-auto pr-1 space-y-4 custom-scrollbar text-xs">
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Recurso 1: Importação de CSV */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <FileSpreadsheet className="w-4 h-4 flex-shrink-0" />
+                      <span>Importação Avançada de CSV</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      Envie qualquer planilha de produtos ou categorias. A IA identifica e mapeia colunas (foto, nome, etc.) automaticamente, cria categorias inexistentes na hora e ignora colunas incompatíveis.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      "Importe este arquivo no sistema..." ou anexe um .csv/.txt
+                    </div>
+                  </div>
+
+                  {/* Recurso 2: Monitoramento de Preços */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <Cpu className="w-4 h-4 flex-shrink-0" />
+                      <span>Sincronização de Preços & Markup</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      Sincronize preços com fornecedores externos (ex: Auraa Store) com 40% de margem de lucro. A IA testa links, detecta preços e pergunta se precisar de ajuda com seletores CSS de forma interativa.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      "Pegue os preços do site X link Y..."
+                    </div>
+                  </div>
+
+                  {/* Recurso 3: Ações Administrativas Diretas */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <Terminal className="w-4 h-4 flex-shrink-0" />
+                      <span>Comandos no Banco Supabase</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      A IA pode fazer alterações diretas seguras e auditadas no banco de dados. Modifique produtos, crie categorias ou configure sincronizadores de preços escrevendo apenas em linguagem natural.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      "Mude o estoque da variação 12 para 50..."
+                    </div>
+                  </div>
+
+                  {/* Recurso 4: Tela Dividida (Split Screen) */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <Columns className="w-4 h-4 flex-shrink-0" />
+                      <span>Chats Simultâneos (Split View)</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      Fale em dois canais ao mesmo tempo! Clique no ícone de colunas na barra lateral para abrir qualquer conversa no lado direito da tela e realizar multitarefas de forma integrada.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      Passe o mouse em um chat na barra lateral e clique em [Columns]
+                    </div>
+                  </div>
+
+                  {/* Recurso 5: Múltiplas Chaves de API */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <Key className="w-4 h-4 flex-shrink-0" />
+                      <span>Gerenciador de Chaves de API</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      Cadastre e nomeie múltiplas chaves OpenRouter. Associe chaves de API diferentes para chats individuais no cabeçalho de cada conversa para total flexibilidade e controle.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      Clique no botão [CHAVES] no cabeçalho para gerenciar
+                    </div>
+                  </div>
+
+                  {/* Recurso 6: Workspace e Canais Fixos */}
+                  <div className="p-4 bg-dark-900/60 border border-dark-600/40 rounded-xl space-y-2 hover:border-cyan-500/30 transition-all">
+                    <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                      <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                      <span>Workspace Organizacional</span>
+                    </div>
+                    <p className="text-gray-400 leading-relaxed">
+                      Aproveite canais fixos focados em Uploads (📤 Configurar Uploads) e Scrapers (🔍 Pesquisa de Preços), ou crie e fixe seus próprios chats customizados para manter tudo organizado.
+                    </p>
+                    <div className="p-2 rounded bg-dark-800/50 text-[10px] text-gray-500 font-mono">
+                      Clique duas vezes no título de um chat para renomeá-lo
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="flex justify-end pt-4 border-t border-dark-600/30 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowFeaturesModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium shadow-lg shadow-cyan-500/10 hover:opacity-90 transition-all text-center active:scale-95"
+                >
+                  Entendido, obrigado!
                 </button>
               </div>
             </motion.div>
