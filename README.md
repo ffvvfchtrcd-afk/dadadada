@@ -49,3 +49,18 @@ Para que o React possa ler e escrever nos arquivos JSON sem a necessidade de um 
 ├── vite.config.js       # Configuração e API Plugin local
 └── tailwind.config.js   # Tokens de design Premium
 ```
+
+## 🤖 IA Copiloto (OpenRouter)
+
+O painel agora conta com uma **IA Copiloto integrada via OpenRouter**! Ela oferece:
+- **Visualização Dividida (Split Chat)**: Converse em canais de texto ou analise simultaneamente duas conversas.
+- **Sincronização Automática com Fornecedores**: Configuração e execução de robôs que analisam e copiam preços de sites de fornecedores externos com base em markup percentual.
+- **Importação Pragmática em Lote**: Importe produtos ou categorias inteiras enviando ou colando arquivos `.csv` de estoque.
+- **Automação de Banco de Dados**: A IA é capaz de rodar mutações diretas e seguras no Supabase por meio de comandos estruturados, como edição e deleção de produtos.
+
+## 🚀 Deploy e Sincronização na Vercel
+
+O projeto está configurado para publicação em nuvem através da Vercel:
+- **Painel Administrativo**: Pasta raiz com suporte a API Serverless para Crons e rotas estáticas do painel.
+- **Storefront (Vitrine Principal)**: Localizado na pasta `/nexmarket` contendo o e-commerce de produtos digitais moderno e responsivo.
+
