@@ -1,92 +1,46 @@
-# PLANO DE IMPLEMENTAÇÃO: IA Copiloto do Administrador com OpenRouter Free
+# Plano de Resolução: Erro 404 no F5 (Roteamento SPA Vercel)
 
-Este plano descreve o design, arquitetura e implementação da **IA Copiloto** integrada ao Painel Administrativo do **NexMarket**. O foco exclusivo é fornecer ao administrador uma ferramenta de controle por voz/texto capaz de consultar métricas, gerenciar estoque, editar produtos/variações e alterar regras de entrega de forma inteligente e socrática, prevenindo ações ambíguas.
+Este documento descreve o plano estratégico coordenado pelo Orchestrator para resolver o erro 404 que ocorre ao atualizar a página (F5) no painel de administração (`/admin/copilot`) e na loja storefront (`/cart`, `/product/:id`).
 
----
+## 1. Análise da Causa Raiz
+No modelo de Single Page Application (SPA) utilizando Vite e React Router, a navegação ocorre inteiramente no lado do cliente (navegador). Quando o usuário acessa `https://dominio.com/admin/copilot` e atualiza a página (F5):
+1. O navegador envia uma requisição HTTP direta para o servidor da Vercel pedindo o caminho `/admin/copilot`.
+2. A Vercel procura fisicamente por uma pasta `admin/` com um arquivo `copilot.html` ou similar.
+3. Como esse arquivo não existe fisicamente (tudo é gerenciado dinamicamente pelo JavaScript do React dentro de `index.html`), o servidor retorna o erro **404: NOT_FOUND**.
 
-## 🏗️ Arquitetura do Sistema
+## 2. Diagnóstico da Situação Atual
+A nossa correção anterior criou os arquivos `vercel.json` dentro das pastas públicas:
+* `/public/vercel.json` (Painel Administrativo)
+* `/nexmarket/public/vercel.json` (Loja Storefront)
 
-```mermaid
-graph TD
-    UI[src/pages/admin/Copilot/index.jsx] -->|1. Envia Chat| ORS[src/services/openrouterService.js]
-    ACS[src/services/aiContextService.js] -->|2. Consolida Dados| ORS
-    DB[(Supabase Database)] -->|Busca Métricas, Produtos & Estoque| ACS
-    ORS -->|3. promptSystem + Contexto| API[API OpenRouter Free]
-    API -->|4. Resposta com [ADMIN_ACTION]| UI
-    UI -->|5. Intercepta Ação| AAS[src/services/aiActionService.js]
-    AAS -->|6. Atualiza Dados| DB
-```
+Esses arquivos serão copiados automaticamente para a pasta final `/dist/` pelo Vite durante o build na Vercel.
+**Por que o erro ainda ocorreu na imagem do usuário:**
+* O status do Git local está 100% atualizado, mas o usuário **ainda não executou os comandos `git push`** para enviar os arquivos criados para o GitHub.
+* Portanto, o deploy ativo na Vercel ainda é uma versão antiga que não contém a nossa blindagem do `vercel.json`.
 
----
+## 3. Plano de Ação & Implementação
 
-## 🛠️ Detalhamento dos Componentes a Serem Criados
+### Fase 1: Sincronização e Deploy
+1. **Instruir o Usuário:** Solicitar que ele realize o Git push local contendo os arquivos `vercel.json` recém-criados.
+2. **Acompanhar o Build:** Aguardar a Vercel compilar e publicar a nova versão que contém os arquivos de reescrita dentro da pasta de build servida.
 
-### 1. 📡 [NEW] [openrouterService.js](file:///f:/New%20folder%20(4)/dadadada/src/services/openrouterService.js)
-* **Objetivo:** Canal de comunicação com o OpenRouter.
-* **Recursos principais:**
-  * Chamadas SSE (`enviarMensagemStream`) para efeito de máquina de escrever (streaming).
-  * Consumo dinâmico da API `https://openrouter.ai/api/v1/models` filtrando apenas modelos cujo custo de entrada e saída seja zero (`pricing.prompt === 0 && pricing.completion === 0`).
-  * Injeção dinâmica do **System Prompt** composto por:
-    1. Regras de comportamento e personalidade.
-    2. Contexto de dados estruturado gerado pelo `aiContextService`.
-    3. Manual de comandos estruturados para disparo de `[ADMIN_ACTION]`.
+### Fase 2: Configuração Alternativa (Redundância Direta)
+Se, por qualquer motivo de configuração no painel da Vercel do usuário, a reescrita via pasta `/public` não for lida:
+1. **Redirecionamento Global:** Configurar o `/vercel.json` na raiz absoluta para abranger também o redirecionamento global caso a Vercel esteja configurada para ler apenas a raiz absoluta e não a subpasta `/dist/`.
+   * Estrutura do `/vercel.json` da raiz:
+     ```json
+     {
+       "cleanUrls": true,
+       "rewrites": [
+         { "source": "/api/(.*)", "destination": "/api/$1" },
+         { "source": "/admin/(.*)", "destination": "/index.html" },
+         { "source": "/(.*)", "destination": "/index.html" }
+       ]
+     }
+     ```
 
-### 📊 2. [NEW] [aiContextService.js](file:///f:/New%20folder%20(4)/dadadada/src/services/aiContextService.js)
-* **Objetivo:** Alimentar o prompt da IA com dados reais do banco.
-* **Consultas no Supabase:**
-  * Métricas de Vendas de hoje e ontem (total vendido, faturamento líquido, contagem de pedidos).
-  * Lista consolidada de categorias.
-  * Catálogo de produtos, mapeando seus IDs, nomes, preços originais, promocionais, métodos de entrega e todas as suas variações associadas (com IDs de variação e estoques).
-* **Formatador:** Converte os dados em um bloco compacto de texto legível para a LLM, otimizando os tokens do modelo gratuito.
-
-### ⚡ 3. [NEW] [aiActionService.js](file:///f:/New%20folder%20(4)/dadadada/src/services/aiActionService.js)
-* **Objetivo:** Executar de fato as mutações no Supabase quando a IA emite a tag `[ADMIN_ACTION]`.
-* **Ações suportadas:**
-  * `EDITAR_PRODUTO`: Executa `update` no Supabase nas colunas de preço, preço promocional, descrição ou título do produto ou variação.
-  * `ALTERAR_METODO_ENTREGA`: Altera o campo `tipo_entrega` e prazos de entrega do produto.
-  * `CARREGAR_ESTOQUE`: Insere novas linhas de contas digitais na tabela de estoque associada à variação do produto.
-
-### 🧠 4. 🛡️ Filtro de Proteção Socrática contra Ambiguidades
-* **A Regra Inquebrável (System Prompt):** 
-  Se o administrador comandar uma ação como *"mude o preço do fone para R$ 80"*, mas houver mais de um produto contendo "fone" ou múltiplas variações, a IA **deve interromper** e não gerar o comando `[ADMIN_ACTION]`. Em vez disso, ela deve listar as opções numeradas de forma clara e perguntar:
-  > *"Identifiquei mais de um produto/variação contendo 'fone' no catálogo:*
-  > *1. Fone Gamer Premium (Preto)*
-  > *2. Fone Gamer Premium (Branco)*
-  > *Por favor, digite o número ou ID correto para que eu possa prosseguir com a alteração de forma segura!"*
-
-### 🎨 5. [NEW] [Copilot Page Component](file:///f:/New%20folder%20(4)/dadadada/src/pages/admin/Copilot/index.jsx)
-* **Visual Premium Dark & Neon:**
-  * Glassmorphism escuro com bordas gradientes animadas.
-  * Dropdown dinâmico para seleção do modelo (ex: `google/gemma-2-9b-it:free`, `meta-llama/llama-3-8b-instruct:free`, `openrouter/free`).
-  * Balões de chat impecáveis em Markdown com suporte a tabelas e listagens.
-  * **Painel Lateral de Ações Recentes:** Mostra um log de comandos executados com sucesso pela IA.
-  * **Overlay de Confirmação:** Quando a IA dispara um comando, o sistema intercepta e exibe uma notificação animada na tela, atualizando a base local e o estado do dashboard de forma reativa.
-
----
-
-## 🔗 Roteamento e Menu Lateral
-
-### 6. [MODIFY] [Sidebar.jsx](file:///f:/New%20folder%20(4)/dadadada/src/components/admin/Sidebar.jsx)
-* Registrar o Copilot no menu sidebar principal:
-  ```javascript
-  { name: 'AI Copilot', path: '/admin/copilot', icon: Sparkles }
-  ```
-  *(Importando a biblioteca `Sparkles` do Lucide React).*
-
-### 7. [MODIFY] [App.jsx](file:///f:/New%20folder%20(4)/dadadada/src/App.jsx)
-* Adicionar a rota protegida sob o layout administrativo:
-  ```jsx
-  <Route path="copilot" element={<Copilot />} />
-  ```
-
----
-
-## 🧪 Plano de Verificação
-
-### Teste de Ambiguidades (Socrático)
-* **Entrada:** *"altere o preço da Netflix para R$ 10"* (Havendo variação de 1 dia e 30 dias).
-* **Esperado:** A IA deve recusar a alteração e listar socraticamente as variações cadastrais solicitando definição.
-
-### Teste de Ações Reais
-* **Entrada:** *"altere a descrição do produto Fone de Ouvido de ID <id> para 'Melhor qualidade sonora'"*.
-* **Esperado:** O aplicativo deve interceptar o JSON `[ADMIN_ACTION]`, rodar a mutation no Supabase, notificar sucesso na tela de chat e refletir a nova descrição instantaneamente.
+## 4. Plano de Verificação (Manual)
+1. Fazer o deploy completo na Vercel.
+2. Acessar a URL: `https://dadadada-cpda.vercel.app/admin/copilot`
+3. Pressionar **F5 / Atualizar**.
+4. A página deve recarregar e abrir o Copiloto instantaneamente, sem exibir a tela de 404 da Vercel.
