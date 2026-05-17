@@ -231,6 +231,12 @@ ${JSON.stringify(contextoConsolidado, null, 2)}
    
    [ADMIN_ACTION] {"comando": "CARREGAR_ESTOQUE", "parametros": {"variationId": "ID_EXATO_DA_VARIACAO", "lines": ["linha1", "linha2"]}}
 
+   [ADMIN_ACTION] {"comando": "CRIAR_PRODUTO", "parametros": {"nome": "Nome do Produto", "categoriaId": "ID_DA_CATEGORIA", "preco": 29.90, "metodoEntrega": "AUTOMATICA" | "MANUAL" | "AGENTE", "miniDesc": "Descrição opcional"}}
+
+   [ADMIN_ACTION] {"comando": "DELETAR_PRODUTO", "parametros": {"id": "ID_DO_PRODUTO_OU_VARIACAO", "tipo": "produto" | "variacao"}}
+
+   [ADMIN_ACTION] {"comando": "ATUALIZAR_SALDO_USUARIO", "parametros": {"email": "email@usuario.com", "saldo": 150.00}}
+
    *Nota sobre CARREGAR_ESTOQUE:* Se o administrador enviar uma lista de contas com linhas em branco ou vazias, você deve obrigatoriamente filtrá-las e enviar no array "lines" somente os itens de estoque válidos.
    *Nota sobre preços:* Nunca invente ou altere dados sem instrução clara do administrador. Formate valores monetários em formato numérico puro no JSON (ex: 29.90).
 

@@ -38,6 +38,93 @@ export const aiActionService = {
           }
         }
 
+        case 'CRIAR_PRODUTO': {
+          const { nome, categoriaId, miniDesc, preco, metodoEntrega } = payload;
+          if (!nome) throw new Error("Nome do produto obrigatório.");
+          if (!categoriaId) throw new Error("Categoria obrigatória.");
+
+          const slug = String(nome).toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, '');
+
+          // 1. Cria o Produto
+          const pResult = await api.save('products', {
+            nome,
+            slug,
+            categoriaId,
+            miniDesc: miniDesc || '',
+            descricao: miniDesc || '',
+            status: 'ATIVO',
+            dataCriacao: new Date().toISOString(),
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          const createdProduct = pResult?.[0] || pResult;
+          if (!createdProduct || !createdProduct.id) throw new Error("Falha ao salvar produto no Supabase.");
+
+          // 2. Cria a variação padrão para o produto
+          const vResult = await api.save('variacoes', {
+            produtoId: createdProduct.id,
+            nome: 'Padrão',
+            slug: 'padrao',
+            preco: Number(preco) || 1.00,
+            estoque_tipo: metodoEntrega || 'MANUAL',
+            status: 'ATIVO',
+            quantidadeStock: 0,
+            stockData: [],
+            dataCriacao: new Date().toISOString(),
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            message: `Produto "${nome}" criado com sucesso junto com a variação Padrão!`,
+            data: { produto: createdProduct, variacao: vResult }
+          };
+        }
+
+        case 'DELETAR_PRODUTO': {
+          const { id, tipo } = payload;
+          if (!id) throw new Error("ID do alvo obrigatório.");
+
+          const targetType = String(tipo).toLowerCase();
+          if (targetType === 'variacao' || targetType === 'variação') {
+            await api.delete('variacoes', id);
+            return { success: true, message: `Variação deletada do Supabase com sucesso!` };
+          } else {
+            // Deleta produto (e opcionalmente suas variações atreladas)
+            const variations = await api.get('variacoes');
+            const related = variations.filter(v => v.produtoId === id);
+            for (const v of related) {
+              await api.delete('variacoes', v.id);
+            }
+            await api.delete('products', id);
+            return { success: true, message: `Produto e todas as suas variações associadas foram deletados com sucesso!` };
+          }
+        }
+
+        case 'ATUALIZAR_SALDO_USUARIO': {
+          const { email, saldo } = payload;
+          if (!email) throw new Error("E-mail do usuário obrigatório.");
+          if (saldo === undefined || isNaN(Number(saldo))) throw new Error("Novo saldo inválido.");
+
+          const users = await api.get('users');
+          const user = users.find(u => String(u.email).toLowerCase() === String(email).toLowerCase());
+          if (!user) throw new Error(`Usuário com e-mail ${email} não encontrado.`);
+
+          const result = await api.patch(`users/${user.id}`, {
+            saldo: Number(saldo),
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            message: `Saldo do usuário ${user.nome} (${email}) atualizado com sucesso para R$ ${Number(saldo).toFixed(2)}!`,
+            data: result
+          };
+        }
+
         case 'ALTERAR_METODO_ENTREGA': {
           const { variationId, metodoEntrega } = payload;
           if (!variationId) throw new Error("ID da variação não fornecido.");
