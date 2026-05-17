@@ -28,6 +28,77 @@ module.exports = async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+    // Modo de teste para configurador (evita CORS ao testar links no painel React)
+    const { test, syncUrl, syncSelector, syncMarkup } = req.body || {};
+    if (test) {
+      if (!syncUrl) {
+        res.status(400).json({ success: false, error: "URL de sincronização para teste não fornecida." });
+        return;
+      }
+
+      const fetchRes = await fetch(syncUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!fetchRes.ok) {
+        throw new Error(`Erro HTTP ${fetchRes.status} ao acessar a URL.`);
+      }
+
+      const html = await fetchRes.text();
+      let extractedPrice = null;
+
+      if (syncSelector && syncSelector !== 'auto') {
+        const cleanSelector = syncSelector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const classRegex = new RegExp(`class=["'][^"']*${cleanSelector}[^"']*["'][^>]*>([^<]+)`, 'i');
+        const idRegex = new RegExp(`id=["']${cleanSelector}["'][^>]*>([^<]+)`, 'i');
+        const tagRegex = new RegExp(`<${cleanSelector}[^>]*>([^<]+)`, 'i');
+        const match = html.match(classRegex) || html.match(idRegex) || html.match(tagRegex);
+        if (match && match[1]) {
+          extractedPrice = match[1].trim();
+        }
+      }
+
+      if (!extractedPrice) {
+        const priceRegex = /(?:R\$\s*|BRL\s*|\$\s*)\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|[0-9]+(?:\.[0-9]{2})?)/gi;
+        const matches = [...html.matchAll(priceRegex)];
+        if (matches.length > 0) {
+          extractedPrice = matches[0][1];
+        }
+      }
+
+      if (!extractedPrice) {
+        res.status(200).json({ success: false, reason: 'PRICE_NOT_FOUND', error: "Não foi possível localizar o preço na estrutura HTML de forma automática." });
+        return;
+      }
+
+      let rawPrice = String(extractedPrice)
+        .replace(/[^\d.,]/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+
+      let parsedPrice = parseFloat(rawPrice);
+      if (isNaN(parsedPrice) || parsedPrice <= 0) {
+        res.status(200).json({ success: false, reason: 'PRICE_PARSE_FAILED', error: `Preço parseado inválido: ${extractedPrice}` });
+        return;
+      }
+
+      const markup = Number(syncMarkup) || 0;
+      const finalPrice = parsedPrice * (1 + markup / 100);
+
+      res.status(200).json({
+        success: true,
+        originalPrice: parsedPrice,
+        finalPrice: Number(finalPrice.toFixed(2)),
+        markup
+      });
+      return;
+    }
+
     // 1. Busca todas as variações que possuem URL de sincronização configurada
     const { data: variacoes, error: dbError } = await supabase
       .from('variacoes')

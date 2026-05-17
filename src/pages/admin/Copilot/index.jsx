@@ -177,8 +177,42 @@ export default function Copilot() {
           setCurrentActionFeedback({
             comando,
             status: 'failed',
-            message: `Erro na ação ${i + 1}: ${result.error}`
+            message: `Erro na ação ${i + 1}: ${result.error || result.message}`
           });
+
+          // Se a ação falhou com erro de preço não localizado, dispara o loop interativo da IA!
+          if (comando === 'CONFIGURAR_SINCRONIZACAO_PRECO') {
+            const isSelectorFailure = parametros.syncSelector && parametros.syncSelector !== 'auto';
+            const systemInput = isSelectorFailure
+              ? `[SISTEMA: O teste da sincronização de preços falhou mesmo com o seletor "${parametros.syncSelector}" na variação ${parametros.variationId}. Erro: ${result.error || result.message}. Explique ao administrador de forma gentil que a leitura ainda falhou com este seletor, e peça para verificar se o link ou o seletor estão corretos.]`
+              : `[SISTEMA: O teste da sincronização de preços falhou na variação ${parametros.variationId}. Erro: ${result.error || result.message}. Explique de forma muito amigável que você tentou ler o link mas não localizou o preço de forma automática. Pergunte qual é a classe CSS (ex: '.price-item', '.money'), ID ou tag HTML onde o preço fica localizado nesta página para tentarmos novamente.]`;
+
+            setTimeout(async () => {
+              setLoading(true);
+              const assistantMsgId = `ai-${Date.now()}`;
+              
+              setMessages(prev => {
+                const updatedMessages = [...prev, { id: assistantMsgId, role: 'assistant', content: '' }];
+                const messagesToSend = [
+                  ...prev,
+                  { id: `sys-${Date.now()}`, role: 'user', content: systemInput }
+                ];
+                
+                openrouterService.enviarMensagemStream(
+                  messagesToSend,
+                  model,
+                  (chunk, fullContent) => {
+                    setMessages(innerPrev => innerPrev.map(msg => 
+                      msg.id === assistantMsgId ? { ...msg, content: fullContent } : msg
+                    ));
+                  }
+                ).catch(err => console.error("Erro no fluxo interativo:", err))
+                 .finally(() => setLoading(false));
+
+                return updatedMessages;
+              });
+            }, 1000);
+          }
         }
       } catch (err) {
         console.error(`Erro ao rodar ação ${i + 1}:`, err);

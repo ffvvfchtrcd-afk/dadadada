@@ -438,16 +438,50 @@ export const aiActionService = {
           if (!variationId) throw new Error("ID da variação não fornecido.");
           if (!syncUrl) throw new Error("URL de sincronização obrigatória.");
 
+          const markupValue = syncMarkup !== undefined ? Number(syncMarkup) : 40.00;
+
+          // 1. Testa a extração de preço chamando o proxy serverless para evitar erros de CORS
+          const testRes = await fetch('/api/cron-price-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              test: true,
+              syncUrl,
+              syncSelector: syncSelector || 'auto',
+              syncMarkup: markupValue
+            })
+          });
+
+          if (!testRes.ok) {
+            throw new Error(`Erro na rede do servidor de teste: HTTP ${testRes.status}`);
+          }
+
+          const testData = await testRes.json();
+
+          if (!testData.success) {
+            // Falhou ao encontrar o preço. Retorna uma falha tratável e solicita seletor manual ao usuário
+            return {
+              success: false,
+              reason: 'PRICE_NOT_FOUND',
+              message: `Acessei o link, mas não consegui localizar o preço no HTML de forma automática. Por favor, me diga em qual classe CSS, ID ou tag HTML fica o preço nessa página para eu tentar novamente!`,
+              data: { syncUrl, syncSelector, syncMarkup: markupValue }
+            };
+          }
+
+          // 2. Se obteve sucesso, grava as informações no Supabase e atualiza o preço final da variação
+          const finalPrice = testData.finalPrice;
           const result = await api.patch(`variacoes/${variationId}`, {
+            preco: finalPrice,
             sync_url: syncUrl,
             sync_selector: syncSelector || 'auto',
-            sync_markup: Number(syncMarkup) || 0.00,
+            sync_markup: markupValue,
+            sync_last_at: new Date().toISOString(),
             dataAtualizacao: new Date().toISOString()
           });
 
           return {
             success: true,
-            message: `Sincronização de preço configurada com sucesso para a variação ${variationId}!`,
+            message: `Sincronização configurada com sucesso! Consegui ler o link, extraí o preço original de R$ ${testData.originalPrice.toFixed(2)} e, aplicando sua margem de ${markupValue}%, atualizei o preço da variação para R$ ${finalPrice.toFixed(2)}!`,
             data: result
           };
         }
