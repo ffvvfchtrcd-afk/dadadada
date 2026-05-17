@@ -1,52 +1,62 @@
-import { NextResponse } from 'next/server';
-
 // IP público do seu computador autorizado a acessar o Painel
 const ALLOWED_IPS = ['186.226.212.46', '127.0.0.1', '::1'];
 
-// Chave secreta de bypass caso seu IP de internet mude (operadoras de internet reiniciando o modem)
+// Chave secreta de bypass caso seu IP de internet mude
 // Para reativar seu acesso, basta abrir no navegador: https://seu-link-admin.vercel.app/?passkey=gerente-exclusivo-seguro-8899
 const BYPASS_PASSKEY = 'gerente-exclusivo-seguro-8899';
 
-// Nome do cookie criptografado de autorização
+// Nome do cookie de autorização
 const COOKIE_NAME = 'admin_ip_bypass_token';
 
 export function middleware(request) {
   const url = new URL(request.url);
   
-  // Captura o IP que está acessando a Vercel
-  const ip = request.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
+  // Captura o IP que está acessando a Vercel através dos cabeçalhos padrão HTTP de borda
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
   
-  // Limpa o formato do IP (remove mapeamentos IPv6/IPv4 se houver)
-  const cleanIp = ip.replace(/^::ffff:/, '');
+  // Limpa o formato do IP (pega o primeiro IP da lista e remove mapeamento IPv6 se houver)
+  const cleanIp = ip.split(',')[0].trim().replace(/^::ffff:/, '');
 
   // 1. Verifica se a URL contém o parâmetro secreto de bypass de IP
   const passkey = url.searchParams.get('passkey');
   if (passkey === BYPASS_PASSKEY) {
-    const response = NextResponse.redirect(new URL(url.pathname, request.url));
+    // Redireciona limpando a barra de navegação (?passkey=...) para segurança adicional
+    const redirectUrl = new URL(url.pathname, request.url);
+    const headers = new Headers();
+    headers.set('Location', redirectUrl.toString());
     
-    // Define um cookie seguro válido por 365 dias (1 ano)
-    response.cookies.set(COOKIE_NAME, 'authorized', {
-      maxAge: 60 * 60 * 24 * 365,
-      path: '/',
-      secure: true,
-      sameSite: 'strict',
+    // Insere o cookie nativo com duração de 365 dias
+    headers.set('Set-Cookie', `${COOKIE_NAME}=authorized; Max-Age=${60 * 60 * 24 * 365}; Path=/; Secure; SameSite=Strict`);
+    
+    return new Response(null, {
+      status: 307,
+      headers: headers,
     });
-    return response;
   }
 
-  // 2. Verifica se o navegador possui o cookie seguro de bypass ativo
-  const hasBypassCookie = request.cookies.get(COOKIE_NAME);
-  if (hasBypassCookie) {
-    return NextResponse.next();
+  // 2. Parse manual e ultra-rápido de Cookies (API nativa de cabeçalhos)
+  const cookieHeader = request.headers.get('cookie') || '';
+  const cookies = {};
+  cookieHeader.split(';').forEach(c => {
+    const parts = c.trim().split('=');
+    if (parts.length >= 2) {
+      cookies[parts[0]] = parts[1];
+    }
+  });
+
+  // 3. Permite acesso se o Cookie de bypass estiver ativo e correto
+  const hasBypassCookie = cookies[COOKIE_NAME];
+  if (hasBypassCookie === 'authorized') {
+    return; // Retorna undefined para passar a conexão adiante normalmente
   }
 
-  // 3. Verifica se o IP atual está na lista de IPs permitidos
+  // 4. Permite acesso se o IP do usuário constar na whitelist autorizada
   const isIpAllowed = ALLOWED_IPS.includes(cleanIp);
   if (isIpAllowed) {
-    return NextResponse.next();
+    return; // Retorna undefined para passar a conexão adiante normalmente
   }
 
-  // 4. Bloqueia a conexão para qualquer outro IP
+  // 5. Bloqueia a conexão para qualquer outro IP não autorizado (Retorna HTML estilizado de 403)
   return new Response(
     `<!DOCTYPE html>
     <html lang="pt-BR">
