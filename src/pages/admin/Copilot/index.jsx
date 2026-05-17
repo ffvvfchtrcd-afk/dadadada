@@ -795,7 +795,7 @@ export default function Copilot() {
                     ATIVO
                   </span>
                   <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    v1.3.1
+                    v1.3.2
                   </span>
                 </h1>
                 <p className="text-xs text-gray-500">Superpoderes de controle e auditoria baseados em OpenRouter</p>
