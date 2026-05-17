@@ -129,6 +129,202 @@ export const aiActionService = {
           }
         }
 
+        case 'CRIAR_CATEGORIA': {
+          const { nome, icone, imageUrl } = payload;
+          if (!nome) throw new Error("Nome da categoria obrigatório.");
+
+          const slug = String(nome).toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, '');
+
+          const result = await api.save('categories', {
+            nome,
+            slug,
+            icone: icone || 'Folder',
+            imageUrl: imageUrl || '',
+            status: 'ATIVO',
+            hierarquia: 1,
+            dataCriacao: new Date().toISOString(),
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            message: `Categoria "${nome}" criada com sucesso no Supabase!`,
+            data: result
+          };
+        }
+
+        case 'DELETAR_CATEGORIA': {
+          const { id } = payload;
+          if (!id) throw new Error("ID da categoria obrigatório.");
+
+          // Busca produtos sob esta categoria para limpar em cascata
+          const products = await api.get('products');
+          const relatedProducts = products.filter(p => String(p.categoriaId) === String(id));
+
+          for (const p of relatedProducts) {
+            const variations = await api.get('variacoes');
+            const relatedVars = variations.filter(v => v.produtoId === p.id);
+            for (const v of relatedVars) {
+              await api.delete('variacoes', v.id);
+            }
+            await api.delete('products', p.id);
+          }
+
+        }
+
+        case 'CRIAR_PRODUTOS_LOTE': {
+          const { produtos } = payload;
+          if (!produtos || !Array.isArray(produtos) || produtos.length === 0) {
+            throw new Error("Nenhum produto fornecido para o lote.");
+          }
+
+          const createdList = [];
+          for (const prod of produtos) {
+            const { nome, categoriaId, miniDesc, variacoes } = prod;
+            if (!nome || !categoriaId) continue;
+
+            // 1. Resolve ou cria de forma autónoma a categoria se não existir
+            let catId = categoriaId;
+            try {
+              const categories = await api.get('categories');
+              const catExists = categories.find(c => 
+                String(c.id) === String(catId) || 
+                String(c.nome).toLowerCase() === String(catId).toLowerCase()
+              );
+
+              if (!catExists) {
+                // Cria a nova categoria ausente automaticamente
+                const newCatSlug = String(catId).toLowerCase()
+                  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/(^-|-$)+/g, '');
+
+                const newCat = await api.save('categories', {
+                  nome: catId, 
+                  slug: newCatSlug,
+                  icone: 'Folder',
+                  imageUrl: '',
+                  status: 'ATIVO',
+                  hierarquia: 1,
+                  dataCriacao: new Date().toISOString(),
+                  dataAtualizacao: new Date().toISOString()
+                });
+                const createdCatObj = newCat?.[0] || newCat;
+                catId = createdCatObj.id;
+              } else {
+                catId = catExists.id;
+              }
+            } catch (errCat) {
+              console.error("Falha ao resolver/criar categoria automaticamente, usando valor original:", errCat);
+            }
+
+            const slug = String(nome).toLowerCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/(^-|-$)+/g, '');
+
+            // 2. Cria o Produto
+            const pResult = await api.save('products', {
+              nome,
+              slug,
+              categoriaId: catId,
+              miniDesc: miniDesc || '',
+              descricao: miniDesc || '',
+              status: 'ATIVO',
+              dataCriacao: new Date().toISOString(),
+              dataAtualizacao: new Date().toISOString()
+            });
+
+            const createdProduct = pResult?.[0] || pResult;
+            if (!createdProduct || !createdProduct.id) continue;
+
+            // 2. Cria as variações associadas
+            const vResults = [];
+            if (variacoes && Array.isArray(variacoes) && variacoes.length > 0) {
+              for (const v of variacoes) {
+                const vSlug = String(v.nome || 'padrao').toLowerCase()
+                  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/(^-|-$)+/g, '');
+
+                const vRes = await api.save('variacoes', {
+                  produtoId: createdProduct.id,
+                  nome: v.nome || 'Padrão',
+                  slug: vSlug,
+                  preco: Number(v.preco) || 1.00,
+                  estoque_tipo: v.metodoEntrega || v.estoque_tipo || 'MANUAL',
+                  status: v.status || 'ATIVO',
+                  quantidadeStock: Number(v.quantidadeStock) || 0,
+                  stockData: v.stockData || [],
+                  dataCriacao: new Date().toISOString(),
+                  dataAtualizacao: new Date().toISOString()
+                });
+                vResults.push(vRes);
+              }
+            } else {
+              const vRes = await api.save('variacoes', {
+                produtoId: createdProduct.id,
+                nome: 'Padrão',
+                slug: 'padrao',
+                preco: 1.00,
+                estoque_tipo: 'MANUAL',
+                status: 'ATIVO',
+                quantidadeStock: 0,
+                stockData: [],
+                dataCriacao: new Date().toISOString(),
+                dataAtualizacao: new Date().toISOString()
+              });
+              vResults.push(vRes);
+            }
+            createdList.push({ produto: createdProduct, variacoes: vResults });
+          }
+
+          return {
+            success: true,
+            message: `Importação em lote concluída! Criado com sucesso ${createdList.length} produto(s) no Supabase!`,
+            data: createdList
+          };
+        }
+
+        case 'CRIAR_CATEGORIAS_LOTE': {
+          const { categorias } = payload;
+          if (!categorias || !Array.isArray(categorias) || categorias.length === 0) {
+            throw new Error("Nenhuma categoria fornecida para o lote.");
+          }
+
+          const createdList = [];
+          for (const cat of categorias) {
+            const { nome, icone, imageUrl } = cat;
+            if (!nome) continue;
+
+            const slug = String(nome).toLowerCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/(^-|-$)+/g, '');
+
+            const result = await api.save('categories', {
+              nome,
+              slug,
+              icone: icone || 'Folder',
+              imageUrl: imageUrl || '',
+              status: 'ATIVO',
+              hierarquia: 1,
+              dataCriacao: new Date().toISOString(),
+              dataAtualizacao: new Date().toISOString()
+            });
+            createdList.push(result?.[0] || result);
+          }
+
+          return {
+            success: true,
+            message: `Importação em lote concluída! Criada com sucesso ${createdList.length} categoria(s) no Supabase!`,
+            data: createdList
+          };
+        }
+
         case 'ATUALIZAR_SALDO_USUARIO': {
           const { email, saldo } = payload;
           if (!email) throw new Error("E-mail do usuário obrigatório.");
@@ -234,6 +430,42 @@ export const aiActionService = {
             success: true,
             message: `Removido com sucesso ${removedCount} conta(s) do estoque da variação ${variation.nome || variationId}!`,
             data: result
+          };
+        }
+
+        case 'CONFIGURAR_SINCRONIZACAO_PRECO': {
+          const { variationId, syncUrl, syncSelector, syncMarkup } = payload;
+          if (!variationId) throw new Error("ID da variação não fornecido.");
+          if (!syncUrl) throw new Error("URL de sincronização obrigatória.");
+
+          const result = await api.patch(`variacoes/${variationId}`, {
+            sync_url: syncUrl,
+            sync_selector: syncSelector || 'auto',
+            sync_markup: Number(syncMarkup) || 0.00,
+            dataAtualizacao: new Date().toISOString()
+          });
+
+          return {
+            success: true,
+            message: `Sincronização de preço configurada com sucesso para a variação ${variationId}!`,
+            data: result
+          };
+        }
+
+        case 'EXECUTAR_SINCRONIZACAO_PRECOS': {
+          const response = await fetch('/api/cron-price-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error || "Falha na resposta do servidor de sincronização.");
+          }
+
+          return {
+            success: true,
+            message: `Sincronização de preços em lote concluída com sucesso!`,
+            data: result.logs
           };
         }
 

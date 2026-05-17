@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, Bot, User, RefreshCw, Play, CheckCircle2,
-  AlertTriangle, Key, Cpu, History, Trash2, X, Terminal
+  AlertTriangle, Key, Cpu, History, Trash2, X, Terminal,
+  Paperclip, FileSpreadsheet
 } from 'lucide-react';
 import { openrouterService } from '../../../services/openrouterService';
 import { aiActionService } from '../../../services/aiActionService';
@@ -57,8 +58,32 @@ export default function Copilot() {
   const [customKey, setCustomKey] = useState('');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [currentActionFeedback, setCurrentActionFeedback] = useState(null);
+  const [attachedFile, setAttachedFile] = useState(null); // { name: '', size: '', content: '' }
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Manipulador de upload de CSV
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+      alert("Por favor, selecione um arquivo de tabela (.csv) ou texto (.txt).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAttachedFile({
+        name: file.name,
+        size: (file.size / 1024).toFixed(1) + ' KB',
+        content: event.target.result
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Inicializa modelos e configurações
   useEffect(() => {
@@ -175,16 +200,25 @@ export default function Copilot() {
   // Envio de mensagem
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && !attachedFile) || loading) return;
+
+    let finalInput = input.trim();
+    let displayInput = input.trim();
+
+    if (attachedFile) {
+      finalInput = `[ARQUIVO_IMPORTACAO: ${attachedFile.name}]\n\`\`\`csv\n${attachedFile.content}\n\`\`\`\n\nInstrução do Administrador: ${finalInput || 'Importe este arquivo no sistema NexMarket.'}`;
+      displayInput = displayInput ? `📎 Anexou ${attachedFile.name} — ${displayInput}` : `📎 Anexou o arquivo de importação ${attachedFile.name}`;
+    }
 
     const userMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: input.trim()
+      content: displayInput
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setAttachedFile(null); // Limpa o anexo após o clique
     setLoading(true);
 
     const assistantMsgId = `ai-${Date.now()}`;
@@ -192,8 +226,9 @@ export default function Copilot() {
     setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '' }]);
 
     try {
+      const messagesToSend = [...messages, { ...userMessage, content: finalInput }];
       const streamResult = await openrouterService.enviarMensagemStream(
-        [...messages, userMessage],
+        messagesToSend,
         model,
         (chunk, fullContent) => {
           setMessages(prev => prev.map(msg => 
@@ -362,19 +397,63 @@ export default function Copilot() {
         </div>
 
         {/* Input de Mensagem */}
-        <div className="p-6 border-t border-dark-600/30 bg-dark-800/10 backdrop-blur-xl">
-          <form onSubmit={handleSend} className="flex gap-3 relative">
+        <div className="p-6 border-t border-dark-600/30 bg-dark-800/10 backdrop-blur-xl relative">
+          
+          {/* floating file pill */}
+          <AnimatePresence>
+            {attachedFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute -top-12 left-6 right-6 p-3 bg-dark-800/90 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-4 text-xs backdrop-blur-md shadow-lg"
+              >
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span className="font-semibold text-gray-200">{attachedFile.name}</span>
+                  <span className="text-gray-500">({attachedFile.size})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedFile(null)}
+                  className="p-1 text-gray-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSend} className="flex gap-3 relative items-center">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".csv,.txt"
+              className="hidden"
+            />
+            
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => fileInputRef.current?.click()}
+              className="p-4 rounded-xl bg-dark-800/60 border border-dark-600/30 text-gray-400 hover:text-cyan-400 hover:border-cyan-500/30 disabled:opacity-50 transition-all flex items-center justify-center"
+              title="Anexar arquivo CSV ou TXT"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={loading ? 'IA está processando...' : 'Pergunte sobre vendas ou edite o estoque, produtos e variações...'}
+              placeholder={loading ? 'IA está processando...' : 'Cole o CSV, anexe um arquivo ou peça para importar produtos...'}
               disabled={loading}
               className="flex-1 bg-dark-800/50 border border-dark-600/30 rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 text-gray-100 placeholder-gray-500 disabled:opacity-50 transition-all"
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={loading || (!input.trim() && !attachedFile)}
               className="px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-sm flex items-center gap-2 hover:opacity-90 disabled:opacity-40 disabled:hover:opacity-40 shadow-lg shadow-cyan-500/10 active:scale-95 transition-all"
             >
               <span>Enviar</span>

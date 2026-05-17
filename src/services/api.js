@@ -10,7 +10,7 @@ const API_URL = '/api';
 const VALID_COLUMNS = {
   categories: ['id', 'nome', 'slug', 'hierarquia', 'icone', 'imageUrl', 'status', 'dataCriacao', 'dataAtualizacao'],
   products: ['id', 'nome', 'slug', 'categoriaId', 'icone', 'imagens', 'miniDesc', 'descricao', 'tags', 'status', 'dataCriacao', 'dataAtualizacao', 'destaque'],
-  variacoes: ['id', 'produtoId', 'nome', 'slug', 'preco', 'estoque_tipo', 'tipo_conta', 'duracao', 'garantia_dias', 'descricao_extra', 'stockData', 'quantidadeStock', 'vendas_acumuladas', 'status', 'dataCriacao', 'dataAtualizacao'],
+  variacoes: ['id', 'produtoId', 'nome', 'slug', 'preco', 'estoque_tipo', 'tipo_conta', 'duracao', 'garantia_dias', 'descricao_extra', 'stockData', 'quantidadeStock', 'vendas_acumuladas', 'status', 'dataCriacao', 'dataAtualizacao', 'sync_url', 'sync_selector', 'sync_markup', 'sync_last_at'],
   users: ['id', 'comprasIds', 'nome', 'email', 'senha', 'role', 'status', 'saldo', 'emailVerificado', 'telefone', 'ultimoIP', 'dataUltimoLogin', 'estatisticas', 'dataCadastro', 'dataAtualizacao', 'cargo', 'dataCriacao'],
   compras: ['id', 'userId', 'userName', 'productId', 'productName', 'variationId', 'variationName', 'quantity', 'total', 'status', 'metodoEntrega', 'deliveryContent', 'date', 'timeline', 'dateDelivered'],
   banners: ['id', 'imagemUrl', 'link', 'status', 'dataCriacao', 'dataAtualizacao']
