@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Send, Bot, User, RefreshCw, Play, CheckCircle2,
   AlertTriangle, Key, Cpu, History, Trash2, X, Terminal,
-  Paperclip, FileSpreadsheet
+  Paperclip, FileSpreadsheet, Pin, Plus, MessageSquare, Columns
 } from 'lucide-react';
 import { openrouterService } from '../../../services/openrouterService';
 import { aiActionService } from '../../../services/aiActionService';
@@ -42,26 +42,185 @@ function parseSimpleMarkdown(text) {
 }
 
 export default function Copilot() {
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Olá! Sou o seu **IA Copiloto da NexMarket**. Tenho acesso a todo o catálogo de produtos, variações, métodos de entrega e estatísticas de vendas em tempo real. \n\nPosso ajudar você a:\n- **Consultar Métricas:** *"Quantas vendas tivemos hoje?"* ou *"Qual faturamento de ontem?"*\n- **Editar Informações:** *"Mude o preço do Netflix Premium para R$ 19.90"* ou *"Edite a descrição do Fone Gamer"*.\n- **Gerenciar Estoque:** *"Adicione essas contas na variação X"*.\n- **Políticas de Entrega:** *"Altere o envio do plano mensal para automático"*.\n\nComo posso ajudar você a otimizar a sua operação hoje?'
-    }
-  ]);
+  const [threads, setThreads] = useState(() => {
+    const saved = localStorage.getItem('nexmarket_copilot_threads');
+    if (saved) return JSON.parse(saved);
+
+    return [
+      {
+        id: 'thread-uploads',
+        title: '📤 Configurar Uploads',
+        messages: [
+          {
+            id: 'welcome-uploads',
+            role: 'assistant',
+            content: '👋 Olá! Este é o canal dedicado para **Configurar Uploads** de produtos por planilha (CSV/TXT). Você pode arrastar um arquivo para cá, anexar pelo ícone de clipe ou me dar instruções de mapeamento de colunas!'
+          }
+        ],
+        isPermanent: true,
+        category: 'preset'
+      },
+      {
+        id: 'thread-prices',
+        title: '🔍 Pesquisas de Preços',
+        messages: [
+          {
+            id: 'welcome-prices',
+            role: 'assistant',
+            content: '👋 Olá! Este é o canal dedicado para **Pesquisa e Sincronização Dinâmica de Preços** com fornecedores externos. Você pode configurar URLs, definir markups (como sua margem de 40%) e testar seletores de scrapers!'
+          }
+        ],
+        isPermanent: true,
+        category: 'preset'
+      },
+      {
+        id: 'thread-general',
+        title: '💬 Chat Geral',
+        messages: [
+          {
+            id: 'welcome-general',
+            role: 'assistant',
+            content: 'Olá! Sou o seu **IA Copiloto da NexMarket (v1.2)**. Tenho acesso a todo o catálogo de produtos, variações, métodos de entrega e estatísticas de vendas em tempo real. \n\nPosso ajudar você a:\n- **Consultar Métricas:** *"Quantas vendas tivemos hoje?"* ou *"Qual faturamento de ontem?"*\n- **Editar Informações:** *"Mude o preço do Netflix Premium para R$ 19.90"* ou *"Edite a descrição do Fone Gamer"*.\n- **Gerenciar Estoque:** *"Adicione essas contas na variação X"*.\n- **Políticas de Entrega:** *"Altere o envio do plano mensal para automático"*.\n\nComo posso ajudar você a otimizar a sua operação hoje?'
+          }
+        ],
+        isPermanent: true,
+        category: 'preset'
+      }
+    ];
+  });
+
+  const [currentThreadId, setCurrentThreadId] = useState('thread-general');
+  const [editingThreadId, setEditingThreadId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+
+  // Sincroniza threads no localStorage
+  useEffect(() => {
+    localStorage.setItem('nexmarket_copilot_threads', JSON.stringify(threads));
+  }, [threads]);
+
+  // Deriva mensagens da thread ativa de forma transparente
+  const activeThread = threads.find(t => t.id === currentThreadId) || threads.find(t => t.id === 'thread-general') || threads[0];
+  const messages = activeThread.messages;
+
+  // Intercepta setMessages mantendo 100% de retrocompatibilidade
+  const setMessages = (updateFn) => {
+    setThreads(prev => prev.map(t => {
+      if (t.id === currentThreadId) {
+        const nextMessages = typeof updateFn === 'function' ? updateFn(t.messages) : updateFn;
+        return { ...t, messages: nextMessages };
+      }
+      return t;
+    }));
+  };
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [model, setModel] = useState('openrouter/free');
   const [modelsList, setModelsList] = useState([]);
   const [actionLogs, setActionLogs] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [customKey, setCustomKey] = useState('');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [currentActionFeedback, setCurrentActionFeedback] = useState(null);
   const [attachedFile, setAttachedFile] = useState(null); // { name: '', size: '', content: '' }
 
+  // Estados do Chat Dividido (Split Screen)
+  const [splitThreadId, setSplitThreadId] = useState(null);
+  const [splitInput, setSplitInput] = useState('');
+  const [splitAttachedFile, setSplitAttachedFile] = useState(null);
+  const [splitLoading, setSplitLoading] = useState(false);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const splitMessagesEndRef = useRef(null);
+  const splitFileInputRef = useRef(null);
+
+  // Múltiplas Chaves de API do OpenRouter
+  const [apiKeys, setApiKeys] = useState(() => {
+    const saved = localStorage.getItem('nexmarket_copilot_keys');
+    if (saved) return JSON.parse(saved);
+
+    const oldKey = localStorage.getItem('nexmarket_openrouter_key') || '';
+    return [
+      { id: 'key-default', name: 'Chave Principal', value: oldKey }
+    ];
+  });
+
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyValue, setNewKeyValue] = useState('');
+
+  // Salva no localStorage quando muda
+  useEffect(() => {
+    localStorage.setItem('nexmarket_copilot_keys', JSON.stringify(apiKeys));
+    const defaultKey = apiKeys.find(k => k.id === 'key-default')?.value || '';
+    localStorage.setItem('nexmarket_openrouter_key', defaultKey);
+  }, [apiKeys]);
+
+  // Cria uma nova conversa customizada
+  const handleCreateThread = () => {
+    const newThread = {
+      id: `thread-${Date.now()}`,
+      title: `Nova Conversa ${threads.filter(t => t.category !== 'preset').length + 1}`,
+      messages: [
+        {
+          id: `welcome-${Date.now()}`,
+          role: 'assistant',
+          content: '👋 Olá! Esta é uma nova conversa customizada. Como posso ajudar com a NexMarket hoje?'
+        }
+      ],
+      isPermanent: false
+    };
+    setThreads(prev => [...prev, newThread]);
+    setCurrentThreadId(newThread.id);
+  };
+
+  // Alterna o status fixado (permanente) de uma conversa
+  const handleTogglePin = (threadId, e) => {
+    e.stopPropagation();
+    setThreads(prev => prev.map(t => {
+      if (t.id === threadId) {
+        return { ...t, isPermanent: !t.isPermanent };
+      }
+      return t;
+    }));
+  };
+
+  // Deleta uma conversa customizada
+  const handleDeleteThread = (threadId, e) => {
+    e.stopPropagation();
+    const threadToDelete = threads.find(t => t.id === threadId);
+    if (!threadToDelete) return;
+    if (threadToDelete.category === 'preset') {
+      alert("Canais predefinidos do sistema não podem ser excluídos.");
+      return;
+    }
+    
+    if (confirm(`Deseja excluir permanentemente a conversa "${threadToDelete.title}"?`)) {
+      setThreads(prev => prev.filter(t => t.id !== threadId));
+      if (currentThreadId === threadId) {
+        setCurrentThreadId('thread-general');
+      }
+    }
+  };
+
+  // Inicia edição de título
+  const handleStartRename = (thread, e) => {
+    e.stopPropagation();
+    if (thread.category === 'preset') return; // impede renomear presets do sistema
+    setEditingThreadId(thread.id);
+    setEditingTitle(thread.title);
+  };
+
+  // Salva renomeação
+  const handleSaveRename = (threadId) => {
+    if (editingTitle.trim()) {
+      setThreads(prev => prev.map(t => {
+        if (t.id === threadId) {
+          return { ...t, title: editingTitle.trim() };
+        }
+        return t;
+      }));
+    }
+    setEditingThreadId(null);
+  };
 
   // Manipulador de upload de CSV
   const handleFileChange = (e) => {
@@ -104,16 +263,80 @@ export default function Copilot() {
     setActionLogs(savedLogs);
   }, []);
 
-  // Rolagem automática do chat
+  // Rolagem automática do chat principal
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Salvar chave de API customizada
-  const handleSaveKey = (e) => {
+  // Rolagem automática do chat split (dividido)
+  const splitActiveThread = threads.find(t => t.id === splitThreadId);
+  const splitMessages = splitActiveThread ? splitActiveThread.messages : [];
+
+  useEffect(() => {
+    splitMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [splitMessages, splitLoading]);
+
+  // Adicionar nova chave de API
+  const handleAddApiKey = (e) => {
     e.preventDefault();
-    localStorage.setItem('nexmarket_openrouter_key', customKey.trim());
-    setShowKeyModal(false);
+    if (!newKeyName.trim() || !newKeyValue.trim()) return;
+    const newKey = {
+      id: `key-${Date.now()}`,
+      name: newKeyName.trim(),
+      value: newKeyValue.trim()
+    };
+    setApiKeys(prev => [...prev, newKey]);
+    setNewKeyName('');
+    setNewKeyValue('');
+  };
+
+  // Remover chave de API
+  const handleDeleteApiKey = (keyId) => {
+    if (keyId === 'key-default') {
+      alert("A chave principal não pode ser removida.");
+      return;
+    }
+    if (confirm("Deseja remover esta chave de API? Chats associados a ela voltarão a usar a Chave Principal.")) {
+      setApiKeys(prev => prev.filter(k => k.id !== keyId));
+      setThreads(prev => prev.map(t => {
+        if (t.keyId === keyId) {
+          return { ...t, keyId: 'key-default' };
+        }
+        return t;
+      }));
+    }
+  };
+
+  // Salvar valor de uma chave existente
+  const handleUpdateKeyValue = (keyId, newValue) => {
+    setApiKeys(prev => prev.map(k => {
+      if (k.id === keyId) {
+        return { ...k, value: newValue.trim() };
+      }
+      return k;
+    }));
+  };
+
+  // Salvar upload de arquivo no split (dividido)
+  const handleSplitFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+      alert("Por favor, selecione um arquivo de tabela (.csv) ou texto (.txt).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSplitAttachedFile({
+        name: file.name,
+        size: (file.size / 1024).toFixed(1) + ' KB',
+        content: event.target.result
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   // Limpar logs de auditoria
@@ -122,8 +345,8 @@ export default function Copilot() {
     setActionLogs([]);
   };
 
-  // Trata e executa possíveis ações administrativas embutidas na resposta da IA
-  const handlePotentialAdminAction = async (responseText) => {
+  // Trata e executa possíveis ações administrativas embutidas na resposta da IA (vinculada a thread correspondente)
+  const handlePotentialAdminActionForThread = async (responseText, threadId) => {
     const actionRegex = /\[ADMIN_ACTION\]\s*(\{.*)/g;
     let match;
     const actionsToExecute = [];
@@ -188,29 +411,52 @@ export default function Copilot() {
               : `[SISTEMA: O teste da sincronização de preços falhou na variação ${parametros.variationId}. Erro: ${result.error || result.message}. Explique de forma muito amigável que você tentou ler o link mas não localizou o preço de forma automática. Pergunte qual é a classe CSS (ex: '.price-item', '.money'), ID ou tag HTML onde o preço fica localizado nesta página para tentarmos novamente.]`;
 
             setTimeout(async () => {
-              setLoading(true);
+              const isMain = threadId === currentThreadId;
+              if (isMain) setLoading(true);
+              else setSplitLoading(true);
+
               const assistantMsgId = `ai-${Date.now()}`;
               
-              setMessages(prev => {
-                const updatedMessages = [...prev, { id: assistantMsgId, role: 'assistant', content: '' }];
-                const messagesToSend = [
-                  ...prev,
-                  { id: `sys-${Date.now()}`, role: 'user', content: systemInput }
-                ];
-                
-                openrouterService.enviarMensagemStream(
-                  messagesToSend,
-                  model,
-                  (chunk, fullContent) => {
-                    setMessages(innerPrev => innerPrev.map(msg => 
-                      msg.id === assistantMsgId ? { ...msg, content: fullContent } : msg
-                    ));
-                  }
-                ).catch(err => console.error("Erro no fluxo interativo:", err))
-                 .finally(() => setLoading(false));
+              setThreads(prev => prev.map(t => {
+                if (t.id === threadId) {
+                  const updatedMessages = [...t.messages, { id: assistantMsgId, role: 'assistant', content: '' }];
+                  const messagesToSend = [
+                    ...t.messages,
+                    { id: `sys-${Date.now()}`, role: 'user', content: systemInput }
+                  ];
 
-                return updatedMessages;
-              });
+                  // Puxa a chave de API da thread
+                  const threadKeyId = t.keyId || 'key-default';
+                  const keyObject = apiKeys.find(k => k.id === threadKeyId) || apiKeys[0];
+                  const keyValue = keyObject?.value || '';
+                  
+                  openrouterService.enviarMensagemStream(
+                    messagesToSend,
+                    model,
+                    (chunk, fullContent) => {
+                      setThreads(innerPrev => innerPrev.map(innerT => {
+                        if (innerT.id === threadId) {
+                          return {
+                            ...innerT,
+                            messages: innerT.messages.map(msg => 
+                              msg.id === assistantMsgId ? { ...msg, content: fullContent } : msg
+                            )
+                          };
+                        }
+                        return innerT;
+                      }));
+                    },
+                    { apiKey: keyValue }
+                  ).catch(err => console.error("Erro no fluxo interativo:", err))
+                   .finally(() => {
+                      if (isMain) setLoading(false);
+                      else setSplitLoading(false);
+                   });
+
+                  return { ...t, messages: updatedMessages };
+                }
+                return t;
+              }));
             }, 1000);
           }
         }
@@ -231,17 +477,24 @@ export default function Copilot() {
     window.dispatchEvent(new Event('app-state-change'));
   };
 
-  // Envio de mensagem
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if ((!input.trim() && !attachedFile) || loading) return;
+  const handlePotentialAdminAction = (responseText) => {
+    return handlePotentialAdminActionForThread(responseText, currentThreadId);
+  };
 
-    let finalInput = input.trim();
-    let displayInput = input.trim();
+  // Envio de mensagem generalizado para uma thread específica
+  const handleSendToThread = async (threadId, isLeft = true) => {
+    const textInput = isLeft ? input : splitInput;
+    const fileAttached = isLeft ? attachedFile : splitAttachedFile;
+    const isTargetLoading = isLeft ? loading : splitLoading;
 
-    if (attachedFile) {
-      finalInput = `[ARQUIVO_IMPORTACAO: ${attachedFile.name}]\n\`\`\`csv\n${attachedFile.content}\n\`\`\`\n\nInstrução do Administrador: ${finalInput || 'Importe este arquivo no sistema NexMarket.'}`;
-      displayInput = displayInput ? `📎 Anexou ${attachedFile.name} — ${displayInput}` : `📎 Anexou o arquivo de importação ${attachedFile.name}`;
+    if ((!textInput.trim() && !fileAttached) || isTargetLoading) return;
+
+    let finalInput = textInput.trim();
+    let displayInput = textInput.trim();
+
+    if (fileAttached) {
+      finalInput = `[ARQUIVO_IMPORTACAO: ${fileAttached.name}]\n\`\`\`csv\n${fileAttached.content}\n\`\`\`\n\nInstrução do Administrador: ${finalInput || 'Importe este arquivo no sistema NexMarket.'}`;
+      displayInput = displayInput ? `📎 Anexou ${fileAttached.name} — ${displayInput}` : `📎 Anexou o arquivo de importação ${fileAttached.name}`;
     }
 
     const userMessage = {
@@ -250,46 +503,261 @@ export default function Copilot() {
       content: displayInput
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setAttachedFile(null); // Limpa o anexo após o clique
-    setLoading(true);
+    // Adiciona a mensagem do usuário à thread
+    setThreads(prev => prev.map(t => {
+      if (t.id === threadId) {
+        return { ...t, messages: [...t.messages, userMessage] };
+      }
+      return t;
+    }));
+
+    // Limpa os campos daquele lado
+    if (isLeft) {
+      setInput('');
+      setAttachedFile(null);
+      setLoading(true);
+    } else {
+      setSplitInput('');
+      setSplitAttachedFile(null);
+      setSplitLoading(true);
+    }
 
     const assistantMsgId = `ai-${Date.now()}`;
+    
     // Adiciona o balão de resposta em branco
-    setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '' }]);
+    setThreads(prev => prev.map(t => {
+      if (t.id === threadId) {
+        return { ...t, messages: [...t.messages, { id: assistantMsgId, role: 'assistant', content: '' }] };
+      }
+      return t;
+    }));
 
     try {
-      const messagesToSend = [...messages, { ...userMessage, content: finalInput }];
+      const targetThread = threads.find(t => t.id === threadId);
+      const messagesToSend = [...(targetThread ? targetThread.messages : []), { ...userMessage, content: finalInput }];
+      
+      // Carrega a chave de API vinculada à thread correspondente
+      const threadKeyId = targetThread?.keyId || 'key-default';
+      const keyObject = apiKeys.find(k => k.id === threadKeyId) || apiKeys[0];
+      const keyValue = keyObject?.value || '';
+
       const streamResult = await openrouterService.enviarMensagemStream(
         messagesToSend,
         model,
         (chunk, fullContent) => {
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMsgId ? { ...msg, content: fullContent } : msg
-          ));
-        }
+          setThreads(prev => prev.map(t => {
+            if (t.id === threadId) {
+              return {
+                ...t,
+                messages: t.messages.map(msg => 
+                  msg.id === assistantMsgId ? { ...msg, content: fullContent } : msg
+                )
+              };
+            }
+            return t;
+          }));
+        },
+        { apiKey: keyValue }
       );
 
-      // Executa a ação administrativa de forma segura a partir do conteúdo consolidado retornado pelo stream
+      // Executa ação técnica caso a IA tenha retornado comandos estruturados
       if (streamResult && streamResult.content) {
-        await handlePotentialAdminAction(streamResult.content);
+        await handlePotentialAdminActionForThread(streamResult.content, threadId);
       }
 
     } catch (err) {
       console.error(err);
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMsgId 
-          ? { ...msg, content: `⚠️ **Erro de Conexão:** ${err.message || 'Falha ao obter resposta do OpenRouter.'}` } 
-          : msg
-      ));
+      setThreads(prev => prev.map(t => {
+        if (t.id === threadId) {
+          return {
+            ...t,
+            messages: t.messages.map(msg => 
+              msg.id === assistantMsgId 
+                ? { ...msg, content: `⚠️ **Erro de Conexão:** ${err.message || 'Falha ao obter resposta do OpenRouter.'}` } 
+                : msg
+            )
+          };
+        }
+        return t;
+      }));
     } finally {
-      setLoading(false);
+      if (isLeft) setLoading(false);
+      else setSplitLoading(false);
     }
+  };
+
+  const handleSend = (e) => {
+    e.preventDefault();
+    handleSendToThread(currentThreadId, true);
+  };
+
+  const handleSplitSend = (e) => {
+    e.preventDefault();
+    handleSendToThread(splitThreadId, false);
   };
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-dark-950 text-gray-100 relative">
+      
+      {/* Sidebar de Canais e Conversas */}
+      <div className="w-64 bg-dark-900/60 border-r border-dark-600/30 flex flex-col h-full z-20 backdrop-blur-xl">
+        {/* Cabeçalho da Sidebar */}
+        <div className="p-4 border-b border-dark-600/30 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Conversas da IA</span>
+          <button
+            onClick={handleCreateThread}
+            className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all active:scale-95"
+            title="Novo Chat"
+          >
+            <Plus className="w-3 h-3" />
+            Novo
+          </button>
+        </div>
+
+        {/* Lista de Threads */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar">
+          
+          {/* Seção 1: Canais Fixos do Sistema */}
+          <div>
+            <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block px-2 mb-2">Canais do Sistema</span>
+            <div className="space-y-1">
+              {threads.filter(t => t.category === 'preset').map(thread => {
+                const isActive = thread.id === currentThreadId;
+                const isSplitActive = thread.id === splitThreadId;
+                return (
+                  <div
+                    key={thread.id}
+                    onClick={() => setCurrentThreadId(thread.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all text-left text-xs cursor-pointer group relative ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-cyan-500/10 to-indigo-500/10 border border-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/5' 
+                        : isSplitActive
+                        ? 'bg-indigo-500/5 border border-indigo-500/20 text-indigo-400 shadow-sm'
+                        : 'hover:bg-dark-800/40 text-gray-400 border border-transparent hover:text-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="truncate font-medium">{thread.title}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      {/* Botão de Split (Exibido no Hover) */}
+                      {thread.id !== currentThreadId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSplitThreadId(thread.id);
+                          }}
+                          className="p-1 rounded-md hover:bg-dark-700 text-gray-500 hover:text-cyan-400 transition-all opacity-0 group-hover:opacity-100"
+                          title="Abrir no lado direito (Tela Dividida)"
+                        >
+                          <Columns className="w-3 h-3" />
+                        </button>
+                      )}
+                      
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-dark-700/60 text-gray-400 font-semibold border border-dark-600/30 uppercase group-hover:hidden">Fixo</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Seção 2: Conversas Customizadas */}
+          <div>
+            <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500 block px-2 mb-2">Minhas Conversas</span>
+            <div className="space-y-1">
+              {threads.filter(t => t.category !== 'preset').length === 0 ? (
+                <p className="text-[11px] text-gray-600 px-2 py-4 italic text-center">Nenhuma conversa customizada criada.</p>
+              ) : (
+                threads.filter(t => t.category !== 'preset').map(thread => {
+                  const isActive = thread.id === currentThreadId;
+                  const isSplitActive = thread.id === splitThreadId;
+                  const isEditing = thread.id === editingThreadId;
+                  return (
+                    <div
+                      key={thread.id}
+                      onClick={() => setCurrentThreadId(thread.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-left text-xs border cursor-pointer relative group ${
+                        isActive 
+                          ? 'bg-dark-800/80 border-dark-600/60 text-gray-200 shadow-md' 
+                          : isSplitActive
+                          ? 'bg-indigo-500/5 border border-indigo-500/20 text-indigo-400'
+                          : 'hover:bg-dark-800/30 text-gray-400 border-transparent hover:text-gray-300'
+                      }`}
+                    >
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={() => handleSaveRename(thread.id)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveRename(thread.id)}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-dark-900 border border-cyan-500/50 rounded-lg px-2 py-1 text-gray-200 text-xs w-3/4 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                        />
+                      ) : (
+                        <div 
+                          className="flex items-center gap-2 truncate w-2/3"
+                          onDoubleClick={(e) => handleStartRename(thread, e)}
+                          title="Clique duas vezes para renomear"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
+                          <span className="truncate font-medium">{thread.title}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Botão de Split */}
+                        {thread.id !== currentThreadId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSplitThreadId(thread.id);
+                            }}
+                            className="p-1 rounded-md hover:bg-dark-700 text-gray-500 hover:text-cyan-400 transition-all"
+                            title="Abrir no lado direito (Tela Dividida)"
+                          >
+                            <Columns className="w-3 h-3" />
+                          </button>
+                        )}
+                        
+                        {/* Botão de Fixar / Pin */}
+                        <button
+                          onClick={(e) => handleTogglePin(thread.id, e)}
+                          className={`p-1 rounded-md hover:bg-dark-700 transition-all ${thread.isPermanent ? 'text-amber-400' : 'text-gray-500 hover:text-amber-400'}`}
+                          title={thread.isPermanent ? 'Desafixar conversa' : 'Fixar conversa como permanente'}
+                        >
+                          <Pin className="w-3 h-3 fill-current" />
+                        </button>
+                        
+                        {/* Botão de Deletar */}
+                        {!thread.isPermanent && (
+                          <button
+                            onClick={(e) => handleDeleteThread(thread.id, e)}
+                            className="p-1 rounded-md hover:bg-dark-700 text-gray-500 hover:text-red-400 transition-all"
+                            title="Excluir conversa"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Ícone pequeno de pin caso esteja fixada mas sem hover */}
+                      {thread.isPermanent && (
+                        <Pin className="w-2.5 h-2.5 text-amber-500/80 absolute right-2 top-2 group-hover:opacity-0 transition-opacity fill-current" />
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
       
       {/* Container Principal do Chat */}
       <div className="flex-1 flex flex-col h-full relative z-10 border-r border-dark-600/30">
@@ -305,6 +773,9 @@ export default function Copilot() {
                 IA Admin Copiloto
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                   ATIVO
+                </span>
+                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  v1.2
                 </span>
               </h1>
               <p className="text-xs text-gray-500">Superpoderes de controle e auditoria baseados em OpenRouter</p>
@@ -554,15 +1025,15 @@ export default function Copilot() {
         )}
       </AnimatePresence>
 
-      {/* Modal para Chave Customizada */}
+      {/* Modal para Gerenciador de Chaves de API */}
       <AnimatePresence>
         {showKeyModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-md p-6 rounded-2xl bg-dark-800 border border-dark-600/50 shadow-2xl relative"
+              className="w-full max-w-lg p-6 rounded-2xl bg-dark-800 border border-dark-600/50 shadow-2xl relative max-h-[85vh] flex flex-col"
             >
               <button
                 onClick={() => setShowKeyModal(false)}
@@ -576,44 +1047,78 @@ export default function Copilot() {
                   <Key className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-200">Chave OpenRouter</h3>
-                  <p className="text-xs text-gray-500">Configure sua chave de API pessoal</p>
+                  <h3 className="font-semibold text-gray-200">Gerenciador de Chaves OpenRouter</h3>
+                  <p className="text-xs text-gray-500 font-medium">Cadastre e gerencie múltiplas chaves de API</p>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveKey} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                    OpenRouter API Key
-                  </label>
+              {/* Lista de Chaves Cadastradas */}
+              <div className="flex-1 overflow-y-auto mb-4 pr-1 space-y-3 custom-scrollbar">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Minhas Chaves ({apiKeys.length})</span>
+                {apiKeys.map((k) => (
+                  <div key={k.id} className="p-3 bg-dark-900 border border-dark-600/40 rounded-xl flex items-center justify-between gap-3 text-xs">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-cyan-400 truncate">{k.name}</p>
+                      <input
+                        type="password"
+                        value={k.value}
+                        onChange={(e) => handleUpdateKeyValue(k.id, e.target.value)}
+                        placeholder="sk-or-v1-... (Sem chave de API)"
+                        className="bg-transparent text-gray-400 border-none outline-none w-full text-[10px] mt-1 font-mono focus:text-gray-200"
+                      />
+                    </div>
+                    {k.id !== 'key-default' && (
+                      <button
+                        onClick={() => handleDeleteApiKey(k.id)}
+                        className="p-2 text-gray-500 hover:text-red-400 rounded-lg hover:bg-dark-800 transition-all flex-shrink-0"
+                        title="Remover Chave"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Formulário para Adicionar Nova Chave */}
+              <form onSubmit={handleAddApiKey} className="pt-4 border-t border-dark-600/30 space-y-3">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Adicionar Nova Chave</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    required
+                    value={newKeyName}
+                    onChange={(e) => setNewKeyName(e.target.value)}
+                    placeholder="Nome (ex: Chave Pessoal)"
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-cyan-500/50 text-gray-100 placeholder-gray-600 transition-all"
+                  />
                   <input
                     type="password"
-                    value={customKey}
-                    onChange={(e) => setCustomKey(e.target.value)}
-                    placeholder="sk-or-v1-..."
-                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500/50 text-gray-100 placeholder-gray-600 transition-all"
+                    required
+                    value={newKeyValue}
+                    onChange={(e) => setNewKeyValue(e.target.value)}
+                    placeholder="OpenRouter API Key (sk-or-...)"
+                    className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-cyan-500/50 text-gray-100 placeholder-gray-600 transition-all"
                   />
-                  <p className="text-[10px] text-gray-500 mt-2 leading-relaxed">
-                    Se deixado em branco, a aplicação utilizará a chave global segura configurada nas variáveis de ambiente da Vercel.
-                  </p>
                 </div>
-
-                <div className="flex gap-3 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-dark-600 text-xs font-medium text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-all"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-xs shadow-lg shadow-cyan-500/10 transition-all"
-                  >
-                    Salvar Chave
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-medium text-xs shadow-lg shadow-cyan-500/10 transition-all text-center flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Cadastrar Chave
+                </button>
               </form>
+
+              <div className="flex justify-end pt-4 border-t border-dark-600/30 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowKeyModal(false)}
+                  className="px-4 py-2 rounded-xl border border-dark-600 text-xs font-semibold text-gray-400 hover:bg-dark-700/50 hover:text-gray-200 transition-all"
+                >
+                  Concluído
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

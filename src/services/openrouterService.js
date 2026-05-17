@@ -7,7 +7,7 @@ export const openrouterService = {
    * Envia mensagens para a API de chat (Backend Proxy).
    */
   async enviarMensagem(mensagens, modelo, opcoes = {}) {
-    const apiKey = localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
+    const apiKey = opcoes.apiKey || localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
     
     // Busca o contexto consolidado atualizado
     const contextoConsolidado = await aiContextService.obterContextoConsolidado();
@@ -64,7 +64,7 @@ export const openrouterService = {
    * Envia mensagens com streaming em tempo real (SSE).
    */
   async enviarMensagemStream(mensagens, modelo, callbackChunk, opcoes = {}) {
-    const apiKey = localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
+    const apiKey = opcoes.apiKey || localStorage.getItem('nexmarket_openrouter_key') || 'backend-managed';
     
     // Busca o contexto consolidado atualizado
     const contextoConsolidado = await aiContextService.obterContextoConsolidado();
