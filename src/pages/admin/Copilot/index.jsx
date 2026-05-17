@@ -11,8 +11,8 @@ import { aiActionService } from '../../../services/aiActionService';
 function parseSimpleMarkdown(text) {
   if (!text) return '';
   
-  // Limpa blocos de ação técnica para não exibir no balão comum do chat
-  let cleanText = text.replace(/\[ADMIN_ACTION\]\s*\{.*\}\s*$/, '').trim();
+  // Limpa todos os blocos de ação técnica para não exibir na conversa do chat
+  let cleanText = text.replace(/\[ADMIN_ACTION\]\s*\{.*?\}/g, '').trim();
 
   // Escapa HTML básico
   let html = cleanText
@@ -99,19 +99,30 @@ export default function Copilot() {
 
   // Trata e executa possíveis ações administrativas embutidas na resposta da IA
   const handlePotentialAdminAction = async (responseText) => {
-    const actionRegex = /\[ADMIN_ACTION\]\s*(\{.*\})\s*$/;
-    const match = responseText.match(actionRegex);
+    const actionRegex = /\[ADMIN_ACTION\]\s*(\{.*?\})/g;
+    let match;
+    const actionsToExecute = [];
 
-    if (match) {
+    while ((match = actionRegex.exec(responseText)) !== null) {
       try {
         const actionData = JSON.parse(match[1]);
-        const { comando, parametros } = actionData;
+        actionsToExecute.push(actionData);
+      } catch (e) {
+        console.error("Falha ao interpretar comando da IA:", e);
+      }
+    }
 
+    if (actionsToExecute.length === 0) return;
+
+    // Executa as ações em lote sequencialmente
+    for (let i = 0; i < actionsToExecute.length; i++) {
+      const { comando, parametros } = actionsToExecute[i];
+      try {
         // Feedback visual animado
         setCurrentActionFeedback({
           comando,
           status: 'executing',
-          message: `IA solicitou execução de: ${comando}...`
+          message: `IA executando ação (${i + 1}/${actionsToExecute.length}): ${comando}...`
         });
 
         // Executa mutação real no banco
@@ -119,45 +130,46 @@ export default function Copilot() {
 
         if (result.success) {
           const newLog = {
-            id: Date.now(),
+            id: Date.now() + i,
             action: comando,
             details: result.message,
             date: new Date().toLocaleTimeString('pt-BR')
           };
 
-          const updatedLogs = [newLog, ...actionLogs].slice(0, 50);
-          setActionLogs(updatedLogs);
-          localStorage.setItem('nexmarket_ai_logs', JSON.stringify(updatedLogs));
+          // Atualiza os logs na lista de auditoria e local storage
+          setActionLogs(prev => {
+            const updated = [newLog, ...prev].slice(0, 50);
+            localStorage.setItem('nexmarket_ai_logs', JSON.stringify(updated));
+            return updated;
+          });
 
           setCurrentActionFeedback({
             comando,
             status: 'success',
-            message: result.message
+            message: `[${i + 1}/${actionsToExecute.length}] ${result.message}`
           });
-
-          // Notifica os outros componentes para atualizarem o estado local
-          window.dispatchEvent(new Event('app-state-change'));
         } else {
           setCurrentActionFeedback({
             comando,
             status: 'failed',
-            message: `Erro na execução: ${result.error}`
+            message: `Erro na ação ${i + 1}: ${result.error}`
           });
         }
-      } catch (e) {
-        console.error("Falha ao interpretar comando da IA:", e);
-        setCurrentActionFeedback({
-          comando: 'DESCONHECIDO',
-          status: 'failed',
-          message: 'Falha ao decodificar JSON do comando administrativo.'
-        });
+      } catch (err) {
+        console.error(`Erro ao rodar ação ${i + 1}:`, err);
       }
 
-      // Oculta feedback após 5 segundos
-      setTimeout(() => {
-        setCurrentActionFeedback(null);
-      }, 5000);
+      // Pequeno delay entre execuções para dar feedback visual fluido na tela
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
+
+    // Oculta feedback após 3 segundos do término de tudo
+    setTimeout(() => {
+      setCurrentActionFeedback(null);
+    }, 3000);
+
+    // Notifica os outros componentes para atualizarem o estado local do painel
+    window.dispatchEvent(new Event('app-state-change'));
   };
 
   // Envio de mensagem
